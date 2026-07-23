@@ -4,6 +4,18 @@
 
 - 로컬 주소: `http://127.0.0.1:5273`
 - 기술 구성: React 18, TypeScript, Vite, Zustand, Playwright
+- 화면 구성: 흰색 캔버스, 절제된 브라운 포인트, 반응형 편집 화면
+- 글꼴 구성: Pretendard Variable(UI·본문), Noto Serif KR Variable(제목)
+
+## 주요 기능
+
+- 7개 템플릿을 이용한 카드뉴스 제작
+- 프로젝트와 페이지 생성, 복제, 순서 변경, 삭제
+- 텍스트·이미지 편집과 실시간 미리보기
+- 브라우저 자동 저장과 JSON 가져오기·내보내기
+- 1080×1350 PNG 및 여러 페이지 ZIP 내보내기
+- 데스크톱·태블릿·모바일 반응형 UI
+- 키보드 포커스, 상태 안내, reduced-motion을 포함한 접근성 지원
 
 ## 배포 주소
 
@@ -69,13 +81,17 @@ npm run preview
 ```powershell
 npm run lint
 npm run verify:ui
+npm run verify:a11y
 npm run verify:exports
 npm run verify:brand
+npm run verify:lighthouse
 ```
 
 - `verify:ui`: 프로젝트 생성, 템플릿, 모바일 화면, 자동 저장, JSON 오류 처리를 검사합니다.
+- `verify:a11y`: 홈과 편집기의 자동 접근성 위반, 키보드 포커스, 터치 영역, 반응형 레이아웃을 검사합니다.
 - `verify:exports`: PNG 1080×1350, 로컬 글꼴, 떠있는 이미지와 ZIP 순서를 검사합니다.
 - `verify:brand`: 제거 대상 브랜드 문자열이 남았는지 검사합니다.
+- `verify:lighthouse`: 성능, 접근성, 웹 표준과 검색 최적화 기준을 검사합니다.
 
 ## 3. 폴더 구조
 
@@ -86,7 +102,8 @@ cardnews-studio/
 ├─ scripts/
 │  ├─ start-local.ps1         # 서버 확인·실행 후 브라우저 열기
 │  ├─ install-local-shortcut.ps1
-│  └─ verify-brand.mjs
+│  ├─ verify-brand.mjs
+│  └─ verify-lighthouse.mjs
 ├─ src/
 │  ├─ brand/                  # 브랜드 색상·글꼴·디자인 기본값
 │  ├─ components/             # 편집기, 미리보기, 공통 CardRenderer
@@ -99,7 +116,7 @@ cardnews-studio/
 │  ├─ App.tsx
 │  ├─ compositions.ts         # 추천 페이지 구성
 │  └─ types.ts
-├─ tests/                     # Playwright UI·JSON·내보내기 검사
+├─ tests/                     # Playwright UI·접근성·JSON·내보내기 검사
 ├─ PROGRESS.md                # 구현 및 검증 증거
 ├─ package.json
 └─ playwright.config.ts
@@ -110,6 +127,7 @@ cardnews-studio/
 - 앱 이름, 계정명, 파일 슬러그, 저장 제한: `src/config/appConfig.ts`
 - 브랜드 색상과 카드 크기: `src/brand/tokens.ts`
 - 미드나이트 디자인과 글꼴: `src/brand/midnightDesign.ts`
+- 홈·편집기 레이아웃과 반응형 스타일: `src/styles/app.css`
 - 템플릿 입력 필드와 기본 내용: `src/registry/templateRegistry.ts`
 - 한 장/여러 장 추천 구성: `src/compositions.ts`
 
