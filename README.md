@@ -5,7 +5,6 @@
 ## 배포 주소
 
 - 프로덕션: [https://cardnews-studio-inky.vercel.app](https://cardnews-studio-inky.vercel.app)
-- 최신 배포는 Vercel 프로덕션 별칭에 연결됩니다.
 
 ## 프로젝트 정보
 
