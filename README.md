@@ -3,8 +3,12 @@
 글과 사진을 입력해 1080×1350 카드뉴스를 만들고 PNG 또는 ZIP으로 저장하는 로컬 우선 웹앱입니다. 프로젝트와 페이지는 브라우저에 자동 저장되며, 데스크톱과 모바일 편집 화면을 지원합니다.
 
 - 로컬 주소: `http://127.0.0.1:5273`
-- 공개 주소: `https://cardnews-studio-inky.vercel.app`
 - 기술 구성: React 18, TypeScript, Vite, Zustand, Playwright
+
+## 배포 주소
+
+- 프로덕션: [https://cardnews-studio-inky.vercel.app](https://cardnews-studio-inky.vercel.app)
+- 최신 배포는 Vercel 프로덕션 별칭에 연결됩니다.
 
 ## 1. 설치 방법
 
