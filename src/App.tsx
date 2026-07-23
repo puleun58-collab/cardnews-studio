@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { appConfig } from './config/appConfig'
 import { exportProjectJson, useStudioStore } from './store/studioStore'
-import { templateList, templateRegistry } from './registry/templateRegistry'
+import { templateList } from './registry/templateRegistry'
 import { compositions } from './compositions'
 import { CardRenderer } from './components/CardRenderer'
 import { PagePanel } from './components/PagePanel'
@@ -10,8 +10,6 @@ import { FieldEditor } from './components/FieldEditor'
 import { downloadJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
 import { ExportStage } from './components/ExportStage'
 import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize } from './brand/cardSize'
-import { imageFileToDataUrl } from './engine/imageTools'
-import { DEFAULT_OVERLAY_IMAGE } from './engine/overlayImage'
 import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
 import './styles/app.css'
 import './styles/card.css'
@@ -366,21 +364,6 @@ function Editor() {
     if (event.key === 'Escape' && feed) setFeed(false)
   }
 
-  const uploadFromCanvas = async (file: File) => {
-    try {
-      setStatus({ kind: 'loading', message: '이미지 처리 중' })
-      const src = await imageFileToDataUrl(file)
-      if (templateRegistry[page.templateId].fields.some((field) => field.type === 'image')) {
-        store.updatePage(page.id, { image: src })
-      } else {
-        store.updatePage(page.id, { overlayImage: { src, ...DEFAULT_OVERLAY_IMAGE } })
-      }
-      setStatus({ kind: 'success', message: '이미지 추가 완료' })
-    } catch (error) {
-      setStatus({ kind: 'error', message: error instanceof Error ? error.message : '이미지를 처리할 수 없습니다.' })
-    }
-  }
-
   return (
     <div className="studio" aria-busy={busy} onKeyDown={onToolbarKeyDown}>
       <a className="skip-link" href="#main-content">편집 영역으로 건너뛰기</a>
@@ -426,8 +409,8 @@ function Editor() {
               ))}
             </div>
           </div>
-          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive zoom={zoom} onImageFile={uploadFromCanvas} onOverflowChange={setHasOverflow} onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
-          <p className="preview-help">떠있는 이미지는 드래그하거나 방향키로 이동할 수 있습니다.</p>
+          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive zoom={zoom} onOverflowChange={setHasOverflow} onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
+          <p className="preview-help">배경 이미지는 편집 패널에서 추가하고, 떠있는 이미지는 드래그하거나 방향키로 이동할 수 있습니다.</p>
         </section>
         <aside className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
           <div className="panel-heading">

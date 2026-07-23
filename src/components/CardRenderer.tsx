@@ -16,7 +16,8 @@ export function CardRenderer({page,pageIndex,pageCount,size=defaultCardSize,forE
   const layoutScale=size.width/1080
   const logicalHeight=size.height/layoutScale
   const rootStyle={width:size.width,height:size.height,'--card-width':`${size.width}px`,'--card-height':`${size.height}px`} as CSSProperties
-  return <div className={`card-root format-${format} ${forExport?'export-mode':''}`} style={rootStyle} data-template={page.templateId} data-report-overflow={reportOverflow}>
+  return <div className={`card-root format-${format} ${page.backgroundImage?'has-background':''} ${forExport?'export-mode':''}`} style={rootStyle} data-template={page.templateId} data-report-overflow={reportOverflow}>
+    {page.backgroundImage&&<div className="card-background" aria-hidden="true"><img src={page.backgroundImage} alt=""/></div>}
     <div className="card-layout" style={{width:1080,height:logicalHeight,transform:`scale(${layoutScale})`}}>
       <Template page={page} pageIndex={pageIndex} pageCount={pageCount} forExport={forExport} reportOverflow={reportOverflow}/>
     </div>

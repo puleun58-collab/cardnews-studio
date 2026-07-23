@@ -1,9 +1,9 @@
 import { useRef, useState, type DragEvent } from 'react'
-import { fontFamilies, fontIds, normalizeDesign } from '../brand/midnightDesign'
+import { englishFontFamilies, englishFontIds, getCardFontFamily, koreanFontIds, normalizeDesign } from '../brand/midnightDesign'
 import { DEFAULT_OVERLAY_IMAGE } from '../engine/overlayImage'
 import { imageFileToDataUrl } from '../engine/imageTools'
 import { templateList, templateRegistry } from '../registry/templateRegistry'
-import type { CardPage, CardSize, TemplateId, TemplateManifest } from '../types'
+import type { CardPage, CardSize, EnglishFontId, KoreanFontId, TemplateId, TemplateManifest } from '../types'
 import { CardRenderer } from './CardRenderer'
 
 interface Props {
@@ -14,12 +14,22 @@ interface Props {
   onTemplateChange: (id: TemplateId) => void
 }
 
-const fontLabels: Record<string, { name: string; note: string }> = {
+const koreanFontLabels: Record<KoreanFontId, { name: string; note: string }> = {
   pretendard: { name: 'Pretendard', note: '추천' },
   'noto-sans-kr': { name: 'Noto Sans KR', note: '본문' },
-  'bebas-neue': { name: 'Bebas Neue', note: '임팩트' },
-  georgia: { name: 'Georgia', note: '클래식' },
-  'courier-new': { name: 'Courier New', note: '모노' },
+  'nanum-square-neo': { name: '나눔스퀘어 네오', note: '정보' },
+  's-core-dream': { name: '에스코어 드림', note: '제목·본문' },
+  'gmarket-sans': { name: 'G마켓 산스', note: '표지' },
+  paperlogy: { name: '페이퍼로지', note: '에디토리얼' },
+  jalnan: { name: '여기어때 잘난체', note: '임팩트' },
+  'cafe24-surround': { name: 'Cafe24 써라운드', note: '포인트' },
+  'noto-serif-kr': { name: 'Noto Serif KR', note: '인용' },
+}
+const englishFontLabels: Record<EnglishFontId, { name: string; note: string }> = {
+  manrope: { name: 'Manrope', note: '추천' },
+  oswald: { name: 'Oswald', note: '헤드라인' },
+  'cormorant-garamond': { name: 'Cormorant Garamond', note: '에디토리얼' },
+  'ibm-plex-mono': { name: 'IBM Plex Mono', note: '숫자·데이터' },
 }
 
 function TemplateThumbnail({ manifest, size }: { manifest: TemplateManifest; size: CardSize }) {
@@ -46,11 +56,11 @@ function TemplateThumbnail({ manifest, size }: { manifest: TemplateManifest; siz
 export function FieldEditor({ page, size, hasOverflow = false, onChange, onTemplateChange }: Props) {
   const manifest = templateRegistry[page.templateId]
   const primaryImageInput = useRef<HTMLInputElement>(null)
+  const contentImageInput = useRef<HTMLInputElement>(null)
   const overlayInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
-  const hasTemplateImage = manifest.fields.some((field) => field.type === 'image')
-  const activeImage = hasTemplateImage ? page.image : page.overlayImage?.src
+  const activeImage = page.backgroundImage
   const updateContent = (key: string, value: string | string[]) => onChange({ content: { ...page.content, [key]: value } })
   const upload = async (file: File | undefined, overlay: boolean) => {
     if (!file) return
@@ -63,7 +73,16 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
       setError(uploadError instanceof Error ? uploadError.message : '이미지 처리 실패')
     }
   }
-  const uploadPrimaryImage = (file?: File) => upload(file, !hasTemplateImage)
+  const uploadPrimaryImage = async (file?: File) => {
+    if (!file) return
+    try {
+      setError('')
+      const src = await imageFileToDataUrl(file)
+      onChange({ backgroundImage: src })
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : '이미지 처리 실패')
+    }
+  }
   const dropPrimaryImage = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     setDragging(false)
@@ -71,8 +90,7 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
   }
   const removePrimaryImage = () => {
     setError('')
-    if (hasTemplateImage) onChange({ image: null })
-    else onChange({ overlayImage: null })
+    onChange({ backgroundImage: null })
   }
   const design = normalizeDesign(page.design)
 
@@ -105,8 +123,8 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
       <section className="image-upload-section" aria-labelledby="image-upload-title">
         <div className="image-upload-heading">
           <div>
-            <h3 id="image-upload-title">이미지 업로드</h3>
-            <p>{hasTemplateImage ? '선택한 템플릿의 사진 영역에 적용됩니다.' : '카드 위에서 이동할 수 있는 이미지로 추가됩니다.'}</p>
+            <h3 id="image-upload-title">배경 이미지 업로드</h3>
+            <p>카드 전체를 채우는 배경 이미지로 적용됩니다.</p>
           </div>
           {activeImage && <button type="button" className="subtle image-remove" onClick={removePrimaryImage}>삭제</button>}
         </div>
@@ -119,13 +137,13 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
           onDrop={dropPrimaryImage}
         >
           {activeImage && <img src={activeImage} alt="" aria-hidden="true" />}
-          <button type="button" onClick={() => primaryImageInput.current?.click()} aria-label={activeImage ? '이미지 교체' : '이미지 업로드'}>
+          <button type="button" onClick={() => primaryImageInput.current?.click()} aria-label={activeImage ? '배경 이미지 교체' : '배경 이미지 업로드'}>
             <span className="upload-icon" aria-hidden="true">
               <svg viewBox="0 0 32 32" focusable="false">
                 <path d="M16 22V5m0 0-6 6m6-6 6 6M7 20v5.5A2.5 2.5 0 0 0 9.5 28h13a2.5 2.5 0 0 0 2.5-2.5V20" />
               </svg>
             </span>
-            <strong>{dragging ? '여기에 놓으세요' : activeImage ? '이미지 교체' : '이미지 업로드'}</strong>
+            <strong>{dragging ? '여기에 놓으세요' : activeImage ? '배경 이미지 교체' : '배경 이미지 업로드'}</strong>
             <span>클릭하거나 드래그 앤 드롭</span>
             <small>JPG · PNG · WEBP · 최대 20MB</small>
           </button>
@@ -142,7 +160,16 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
       <section className="content-fields" aria-label="카드 내용">
         {manifest.fields.map((field) => {
           if (field.type === 'image') {
-            return null
+            return (
+              <div className="field-group template-image-field" key={field.key}>
+                <span>템플릿 사진 영역</span>
+                <input ref={contentImageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload(event.target.files?.[0], false)} />
+                <div className="button-row">
+                  <button type="button" onClick={() => contentImageInput.current?.click()}>{page.image ? '사진 교체' : '사진 추가'}</button>
+                  {page.image && <button type="button" className="subtle" onClick={() => onChange({ image: null })}>삭제</button>}
+                </div>
+              </div>
+            )
           }
 
           const value = field.type === 'list'
@@ -187,18 +214,33 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
             )}
           </div>
           {manifest.capabilities.includes('fontId') && (
-            <fieldset className="font-picker">
-              <legend>글꼴</legend>
-              <div className="font-options">
-                {fontIds.map((id) => (
-                  <label key={id} style={{ fontFamily: fontFamilies[id] }}>
-                    <input type="radio" name={`font-${page.id}`} value={id} checked={design.fontId === id} onChange={() => onChange({ design: { ...design, fontId: id } })} />
-                    <span className="font-check" aria-hidden="true">{design.fontId === id ? '✓' : ''}</span>
-                    <span>{fontLabels[id].name} <small>({fontLabels[id].note})</small></span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <div className="typography-pickers">
+              <fieldset className="font-picker">
+                <legend>한글 글꼴 <small>9종</small></legend>
+                <div className="font-options" data-font-group="korean">
+                  {koreanFontIds.map((id) => (
+                    <label key={id} style={{ fontFamily: getCardFontFamily(id, design.englishFontId) }}>
+                      <input type="radio" name={`korean-font-${page.id}`} value={id} checked={design.fontId === id} onChange={() => onChange({ design: { ...design, fontId: id } })} />
+                      <span className="font-check" aria-hidden="true">{design.fontId === id ? '✓' : ''}</span>
+                      <span>{koreanFontLabels[id].name} <small>({koreanFontLabels[id].note})</small></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="font-picker">
+                <legend>영문·숫자 글꼴 <small>4종</small></legend>
+                <p className="font-picker-hint">영문과 숫자에만 우선 적용됩니다.</p>
+                <div className="font-options" data-font-group="english">
+                  {englishFontIds.map((id) => (
+                    <label key={id} style={{ fontFamily: `${englishFontFamilies[id]}, Pretendard, sans-serif` }}>
+                      <input type="radio" name={`english-font-${page.id}`} value={id} checked={design.englishFontId === id} onChange={() => onChange({ design: { ...design, englishFontId: id } })} />
+                      <span className="font-check" aria-hidden="true">{design.englishFontId === id ? '✓' : ''}</span>
+                      <span>{englishFontLabels[id].name} <small>({englishFontLabels[id].note})</small></span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
           )}
           {manifest.capabilities.includes('fontSize') && (
             <label>본문 크기 <output>{design.fontSize}px</output>

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { appConfig } from '../config/appConfig'
-import { fontFamilies, normalizeDesign } from '../brand/midnightDesign'
+import { getCardFontFamily, normalizeDesign } from '../brand/midnightDesign'
 import { richText } from '../engine/richtext'
 import { AutoFit } from '../engine/useAutoFit'
 import type { CardProps } from '../types'
@@ -19,9 +19,9 @@ export function MidnightQuote(props: CardProps) {
     textAlign: d.textAlign,
     lineHeight: d.lineHeight,
   }
-  return <div className="template midnight" style={{ backgroundColor: d.backgroundColor, color: d.textColor, fontFamily: fontFamilies[d.fontId] }}>
+  return <div className="template midnight" style={{ backgroundColor: d.backgroundColor, color: d.textColor, fontFamily: getCardFontFamily(d.fontId, d.englishFontId) }}>
     <div className="kicker">{text(props.page, 'kicker')}</div><span className="quote open">“</span>
-    <AutoFit as="blockquote" max={d.fontSize} min={40} style={{ ...bodyStyle, letterSpacing: `${d.letterSpacing / 100}em`, fontWeight: d.fontId === 'kopub-batang-bold' ? 700 : 400 }}><span style={{width:`${d.contentWidth}%`}}>{richText(text(props.page, 'body'))}</span></AutoFit>
+    <AutoFit as="blockquote" max={d.fontSize} min={40} style={{ ...bodyStyle, letterSpacing: `${d.letterSpacing / 100}em`, fontWeight: 400 }}><span style={{width:`${d.contentWidth}%`}}>{richText(text(props.page, 'body'))}</span></AutoFit>
     <span className="quote close">”</span><div className="source">{text(props.page, 'source')}</div><div className="note">{text(props.page, 'note')}</div><Footer {...props}/>
   </div>
 }

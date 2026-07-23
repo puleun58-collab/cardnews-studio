@@ -71,3 +71,27 @@ test('신규 목록에서 제외된 기본 인용 템플릿을 이전 JSON에서
   await expect(page.getByLabel('템플릿').locator('option[value="quote-basic"]')).toHaveCount(0)
   await expect(page.locator('.quote-basic').first()).toContainText('이전 인용문')
 })
+
+test('이전 영문 글꼴 설정을 새 한글·영문 조합으로 복원', async ({ page }) => {
+  await home(page)
+  const legacy = project()
+  legacy.pages[0] = {
+    ...legacy.pages[0],
+    design: {
+      backgroundColor: '#141C33',
+      textColor: '#FFFFFF',
+      fontId: 'bebas-neue',
+      fontSize: 62,
+      letterSpacing: 0,
+      lineHeight: 1.55,
+      textAlign: 'center',
+      verticalAlign: 'center',
+      contentWidth: 100,
+      showPageNumber: true,
+    },
+  }
+  await page.locator('input[accept*="json"]').setInputFiles({ name: 'legacy-font.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, project: legacy })) })
+  await expect(page.getByRole('radio', { name: /Pretendard/ })).toBeChecked()
+  await expect(page.getByRole('radio', { name: /Oswald/ })).toBeChecked()
+  await expect(page.locator('.preview-panel .midnight').first()).toHaveCSS('font-family', /Oswald Variable.*Pretendard/)
+})

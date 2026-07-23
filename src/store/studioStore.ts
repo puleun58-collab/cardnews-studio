@@ -10,7 +10,7 @@ const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
 export function createPage(templateId: TemplateId = 'midnight-quote'): CardPage {
   const manifest = templateRegistry[templateId]
-  return { id: uid(), templateId, variantId: manifest.defaultVariant, content: structuredClone(manifest.sampleContent.content), image: manifest.sampleContent.image ?? null, overlayImage: null, design: manifest.defaultDesign ? normalizeDesign(manifest.defaultDesign) : undefined }
+  return { id: uid(), templateId, variantId: manifest.defaultVariant, content: structuredClone(manifest.sampleContent.content), backgroundImage: null, image: manifest.sampleContent.image ?? null, overlayImage: null, design: manifest.defaultDesign ? normalizeDesign(manifest.defaultDesign) : undefined }
 }
 function normalizePage(raw: unknown): CardPage {
   if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 페이지입니다.')
@@ -23,7 +23,7 @@ function normalizePage(raw: unknown): CardPage {
     const rawValue = p.content?.[field.key]
     content[field.key] = field.type === 'list' ? (Array.isArray(rawValue) ? rawValue.slice(0, 5).map(String) : []) : String(rawValue ?? '').slice(0, field.maxLength)
   }
-  return { id: typeof p.id === 'string' ? p.id : uid(), templateId:p.templateId, variantId:typeof p.variantId === 'string' ? p.variantId : manifest.defaultVariant, content, image:typeof p.image === 'string' ? p.image : null, overlayImage:normalizeOverlayImage(p.overlayImage), design:p.templateId === 'midnight-quote' ? normalizeDesign(p.design) : undefined }
+  return { id: typeof p.id === 'string' ? p.id : uid(), templateId:p.templateId, variantId:typeof p.variantId === 'string' ? p.variantId : manifest.defaultVariant, content, backgroundImage:typeof p.backgroundImage === 'string' ? p.backgroundImage : null, image:typeof p.image === 'string' ? p.image : null, overlayImage:normalizeOverlayImage(p.overlayImage), design:p.templateId === 'midnight-quote' ? normalizeDesign(p.design) : undefined }
 }
 function normalizeProject(raw: unknown): Project {
   if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 프로젝트 파일입니다.')
@@ -56,7 +56,7 @@ const initial = (() => {
 })()
 export const useStudioStore = create<StudioState>((set, get) => ({
   projects:initial.projects, activeProjectId:initial.activeProjectId, activePageId:initial.activePageId, storageError:null,
-  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize, initialImage) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); if(initialImage)pages[0]={...pages[0],image:initialImage}; const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
+  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize, initialImage) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); if(initialImage)pages[0]={...pages[0],backgroundImage:initialImage}; const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
   openProject(id) { const p=get().projects.find(x=>x.id===id); if(p) set({activeProjectId:id,activePageId:p.pages[0]?.id??null}) }, goHome(){set({activeProjectId:null,activePageId:null})},
   renameProject(id,name){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,name:name.trim()||p.name,updatedAt:now()}:p)}))},
   duplicateProject(id){set(s=>{const src=s.projects.find(p=>p.id===id); if(!src)return s; const copy:Project={...structuredClone(src),id:uid(),name:`${src.name} 복사본`,createdAt:now(),updatedAt:now(),pages:src.pages.map(p=>({...structuredClone(p),id:uid()}))}; return {projects:[copy,...s.projects]}})},

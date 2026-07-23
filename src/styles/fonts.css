@@ -1,4 +1,14 @@
 @font-face{font-family:Pretendard;src:url('/fonts/PretendardVariable.woff2') format('woff2-variations');font-style:normal;font-weight:45 920;font-display:swap}
+@font-face{font-family:'NanumSquare Neo';src:url('/fonts/NanumSquareNeo.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'NanumSquare Neo';src:url('/fonts/NanumSquareNeoB.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:'S-Core Dream';src:url('/fonts/SCDreamRegular.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'S-Core Dream';src:url('/fonts/SCDreamBold.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:'Gmarket Sans';src:url('/fonts/GmarketSansMedium.woff2') format('woff2');font-style:normal;font-weight:400 600;font-display:swap}
+@font-face{font-family:'Gmarket Sans';src:url('/fonts/GmarketSansBold.woff2') format('woff2');font-style:normal;font-weight:700 900;font-display:swap}
+@font-face{font-family:Paperlogy;src:url('/fonts/Paperlogy-4Regular.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:Paperlogy;src:url('/fonts/Paperlogy-7Bold.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:Jalnan;src:url('/fonts/Jalnan.woff2') format('woff2');font-style:normal;font-weight:400 900;font-display:swap}
+@font-face{font-family:'Cafe24 Ssurround';src:url('/fonts/Cafe24Ssurround.woff2') format('woff2');font-style:normal;font-weight:400 900;font-display:swap}
 @font-face{font-family:'KoPubWorld Batang';src:url('/fonts/KoPubWorld-Batang-Medium.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
 @font-face{font-family:'KoPubWorld Batang';src:url('/fonts/KoPubWorld-Batang-Bold.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
 @font-face{font-family:'KoPubWorld Dotum';src:url('/fonts/KoPubWorld-Dotum-Medium.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}

@@ -1,22 +1,26 @@
 import type { ComponentType } from 'react'
 
 export type TemplateId = 'cover-hook' | 'midnight-quote' | 'quote-basic' | 'stat-highlight' | 'list-insight' | 'process-steps' | 'comparison' | 'quote-commentary' | 'image-text' | 'divider-closing'
-export type FontId =
+export type KoreanFontId =
   | 'pretendard'
   | 'noto-sans-kr'
-  | 'bebas-neue'
-  | 'georgia'
-  | 'courier-new'
-  | 'kopub-batang'
-  | 'kopub-batang-bold'
-  | 'kopub-dotum'
+  | 'nanum-square-neo'
+  | 's-core-dream'
+  | 'gmarket-sans'
+  | 'paperlogy'
+  | 'jalnan'
+  | 'cafe24-surround'
+  | 'noto-serif-kr'
+export type EnglishFontId = 'manrope' | 'oswald' | 'cormorant-garamond' | 'ibm-plex-mono'
+export type FontId = KoreanFontId
 export type CardSizePreset = 'portrait' | 'square' | 'story' | 'custom'
 export interface CardSize { width: number; height: number }
 
 export interface CardDesignSettings {
   backgroundColor: string
   textColor: string
-  fontId: FontId
+  fontId: KoreanFontId
+  englishFontId: EnglishFontId
   fontSize: number
   letterSpacing: number
   lineHeight: number
@@ -31,6 +35,7 @@ export interface CardPage {
   templateId: TemplateId
   variantId: string
   content: Record<string, string | string[]>
+  backgroundImage?: string | null
   image?: string | null
   overlayImage?: CardOverlayImage | null
   design?: CardDesignSettings
