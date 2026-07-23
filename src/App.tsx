@@ -76,7 +76,6 @@ function ProjectHome() {
             <h1>{appConfig.appName}</h1>
             <p>{appConfig.appDescription}</p>
           </div>
-          <p className="home-purpose">아이디어를 정리하고, 카드로 <span className="no-break">확인하고,</span> <span className="no-break">바로 내보내세요.</span></p>
         </header>
 
         <section className="new-project" aria-labelledby="new-project-title">
