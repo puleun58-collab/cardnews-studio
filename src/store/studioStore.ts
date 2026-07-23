@@ -2,8 +2,9 @@ import { create } from 'zustand'
 import { appConfig } from '../config/appConfig'
 import { normalizeDesign } from '../brand/midnightDesign'
 import { normalizeOverlayImage } from '../engine/overlayImage'
+import { defaultCardSize, normalizeCardSize } from '../brand/cardSize'
 import { templateRegistry } from '../registry/templateRegistry'
-import type { CardPage, Project, TemplateId } from '../types'
+import type { CardPage, CardSize, Project, TemplateId } from '../types'
 
 const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
@@ -29,12 +30,13 @@ function normalizeProject(raw: unknown): Project {
   const p = raw as Partial<Project>
   if ((p.schemaVersion ?? 1) > 1) throw new Error('더 새로운 버전의 파일입니다. 앱을 업데이트해주세요.')
   if (!Array.isArray(p.pages) || p.pages.length < 1 || p.pages.length > appConfig.maxPages) throw new Error(`페이지는 1~${appConfig.maxPages}장이어야 합니다.`)
-  return { schemaVersion:1, id:typeof p.id === 'string' ? p.id : uid(), name:String(p.name || '가져온 프로젝트').slice(0, 80), createdAt:typeof p.createdAt === 'string' ? p.createdAt : now(), updatedAt:now(), pages:p.pages.map(normalizePage) }
+  return { schemaVersion:1, id:typeof p.id === 'string' ? p.id : uid(), name:String(p.name || '가져온 프로젝트').slice(0, 80), createdAt:typeof p.createdAt === 'string' ? p.createdAt : now(), updatedAt:now(), canvasSize:normalizeCardSize(p.canvasSize), pages:p.pages.map(normalizePage) }
 }
 interface StudioState {
   projects: Project[]; activeProjectId: string | null; activePageId: string | null; storageError: string | null
-  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[]): void; openProject(id: string): void; goHome(): void
+  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[], canvasSize?: CardSize): void; openProject(id: string): void; goHome(): void
   renameProject(id: string, name: string): void; duplicateProject(id: string): void; deleteProject(id: string): void
+  updateProjectCanvasSize(id: string, canvasSize: CardSize): void
   setActivePage(id: string): void; addPage(templateId?: TemplateId): void; duplicatePage(id: string): void; deletePage(id: string): void; reorderPages(oldIndex: number, newIndex: number): void
   updatePage(id: string, patch: Partial<CardPage>): void; replacePageTemplate(id: string, templateId: TemplateId): void
   importProject(text: string): void; clearStorageError(): void
@@ -53,11 +55,12 @@ const initial = (() => {
 })()
 export const useStudioStore = create<StudioState>((set, get) => ({
   projects:initial.projects, activeProjectId:initial.activeProjectId, activePageId:initial.activePageId, storageError:null,
-  createProject(name, templateId='midnight-quote', templateIds) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
+  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
   openProject(id) { const p=get().projects.find(x=>x.id===id); if(p) set({activeProjectId:id,activePageId:p.pages[0]?.id??null}) }, goHome(){set({activeProjectId:null,activePageId:null})},
   renameProject(id,name){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,name:name.trim()||p.name,updatedAt:now()}:p)}))},
   duplicateProject(id){set(s=>{const src=s.projects.find(p=>p.id===id); if(!src)return s; const copy:Project={...structuredClone(src),id:uid(),name:`${src.name} 복사본`,createdAt:now(),updatedAt:now(),pages:src.pages.map(p=>({...structuredClone(p),id:uid()}))}; return {projects:[copy,...s.projects]}})},
   deleteProject(id){set(s=>({projects:s.projects.filter(p=>p.id!==id),activeProjectId:s.activeProjectId===id?null:s.activeProjectId,activePageId:s.activeProjectId===id?null:s.activePageId}))},
+  updateProjectCanvasSize(id,canvasSize){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,canvasSize:normalizeCardSize(canvasSize),updatedAt:now()}:p)}))},
   setActivePage(activePageId){set({activePageId})},
   addPage(templateId='midnight-quote'){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length>=appConfig.maxPages)return p; const page=createPage(templateId); queueMicrotask(()=>set({activePageId:page.id})); return {...p,pages:[...p.pages,page],updatedAt:now()}})}))},
   duplicatePage(id){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length>=appConfig.maxPages)return p; const source=p.pages.find(x=>x.id===id); if(!source)return p; const copy={...structuredClone(source),id:uid()}; queueMicrotask(()=>set({activePageId:copy.id})); const at=p.pages.findIndex(x=>x.id===id)+1; const pages=[...p.pages]; pages.splice(at,0,copy); return {...p,pages,updatedAt:now()}})}))},

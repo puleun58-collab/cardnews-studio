@@ -42,6 +42,7 @@ test('invalid JSON, 미래 버전, 100페이지 초과를 거부하고 이전 de
   await input.setInputFiles({ name: 'legacy.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, project: project() })) })
   await expect(page.locator('.studio')).toBeVisible()
   await expect(page.getByLabel('배경색 코드')).toHaveValue('#141C33')
+  await expect(page.locator('.preview-title').getByText('1080 × 1350', { exact: true })).toBeVisible()
 })
 
 test('저장 용량 오류를 사용자에게 표시', async ({ page }) => {

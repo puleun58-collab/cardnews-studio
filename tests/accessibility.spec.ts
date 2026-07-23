@@ -66,20 +66,22 @@ test('home visual foundation stays white and prevents the final phrase from orph
   const result = await page.evaluate(() => {
     const shell = document.querySelector<HTMLElement>('.home-shell')
     const heading = document.querySelector<HTMLElement>('.new-project-intro h2')
-    const phrase = document.querySelector<HTMLElement>('.home-purpose .no-break')
-    const range = document.createRange()
-    if (phrase) range.selectNodeContents(phrase)
+    const phrases = [...document.querySelectorAll<HTMLElement>('.home-purpose .no-break')]
 
     return {
       background: shell ? getComputedStyle(shell).backgroundColor : null,
       headingFont: heading ? getComputedStyle(heading).fontFamily : null,
-      phraseLineCount: phrase ? range.getClientRects().length : 0,
+      phraseLineCounts: phrases.map((phrase) => {
+        const range = document.createRange()
+        range.selectNodeContents(phrase)
+        return range.getClientRects().length
+      }),
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     }
   })
 
   expect(result.background).toBe('rgb(255, 255, 255)')
   expect(result.headingFont).toContain('Noto Serif KR Variable')
-  expect(result.phraseLineCount).toBe(1)
+  expect(result.phraseLineCounts).toEqual([1, 1])
   expect(result.overflow).toBe(0)
 })

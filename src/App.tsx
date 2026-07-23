@@ -9,7 +9,8 @@ import { PreviewPane } from './components/PreviewPane'
 import { FieldEditor } from './components/FieldEditor'
 import { downloadJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
 import { ExportStage } from './components/ExportStage'
-import type { Project, TemplateId } from './types'
+import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize } from './brand/cardSize'
+import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
 import './styles/app.css'
 import './styles/card.css'
 import './styles/fonts.css'
@@ -17,17 +18,52 @@ import './styles/fonts.css'
 type Panel = 'pages' | 'preview' | 'edit'
 type OperationStatus = { kind: 'idle' | 'loading' | 'success' | 'error'; message: string; recovery?: 'import' }
 
+function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size: CardSize) => void }) {
+  const [mode, setMode] = useState<CardSizePreset>(() => getCardSizePreset(size))
+  const selectMode = (nextMode: CardSizePreset) => {
+    setMode(nextMode)
+    if (nextMode !== 'custom') {
+      const preset = cardSizePresets[nextMode]
+      onChange({ width: preset.width, height: preset.height })
+    }
+  }
+  const updateDimension = (key: keyof CardSize, value: string) => onChange(normalizeCardSize({ ...size, [key]: Number(value) }))
+
+  return (
+    <section className="control-section canvas-size-control" aria-labelledby="canvas-size-title">
+      <h3 id="canvas-size-title">캔버스 크기</h3>
+      <label>
+        출력 규격
+        <select aria-label="캔버스 크기" value={mode} onChange={(event) => selectMode(event.target.value as CardSizePreset)}>
+          {Object.entries(cardSizePresets).map(([value, preset]) => <option key={value} value={value}>{preset.label} · {formatCardSize(preset)}</option>)}
+          <option value="custom">사용자 지정</option>
+        </select>
+      </label>
+      {mode === 'custom' && (
+        <div className="dimension-grid">
+          <label>너비<input aria-label="사용자 지정 너비" type="number" min="320" max="4096" step="1" value={size.width} onChange={(event) => updateDimension('width', event.target.value)} /></label>
+          <label>높이<input aria-label="사용자 지정 높이" type="number" min={size.width} max="4096" step="1" value={size.height} onChange={(event) => updateDimension('height', event.target.value)} /></label>
+        </div>
+      )}
+      <p className="muted">{formatCardSize(size)}px · 세로 길이는 너비 이상</p>
+    </section>
+  )
+}
+
 function ProjectHome() {
   const { projects, createProject, openProject, duplicateProject, deleteProject, renameProject } = useStudioStore()
   const [name, setName] = useState('나의 카드뉴스')
   const [template, setTemplate] = useState<TemplateId>('midnight-quote')
   const [compositionId, setCompositionId] = useState('single')
+  const [canvasPreset, setCanvasPreset] = useState<CardSizePreset>('portrait')
+  const [customSize, setCustomSize] = useState<CardSize>({ width: 1080, height: 1440 })
   const nameInput = useRef<HTMLInputElement>(null)
   const composition = compositions.find((item) => item.id === compositionId)!
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    createProject(name, template, compositionId === 'single' ? [template] : composition.templates)
+    const canvasSize = canvasPreset === 'custom' ? normalizeCardSize(customSize) : cardSizePresets[canvasPreset]
+    createProject(name, template, compositionId === 'single' ? [template] : composition.templates, canvasSize)
   }
 
   return (
@@ -40,7 +76,7 @@ function ProjectHome() {
             <h1>{appConfig.appName}</h1>
             <p>{appConfig.appDescription}</p>
           </div>
-          <p className="home-purpose">아이디어를 정리하고, 카드로 확인하고, <span className="no-break">바로 내보내세요.</span></p>
+          <p className="home-purpose">아이디어를 정리하고, 카드로 <span className="no-break">확인하고,</span> <span className="no-break">바로 내보내세요.</span></p>
         </header>
 
         <section className="new-project" aria-labelledby="new-project-title">
@@ -68,6 +104,19 @@ function ProjectHome() {
                 </select>
               </label>
             )}
+            <label>
+              캔버스 크기
+              <select aria-label="새 프로젝트 캔버스 크기" value={canvasPreset} onChange={(event) => setCanvasPreset(event.target.value as CardSizePreset)}>
+                {Object.entries(cardSizePresets).map(([value, preset]) => <option key={value} value={value}>{preset.label} · {formatCardSize(preset)}</option>)}
+                <option value="custom">사용자 지정</option>
+              </select>
+            </label>
+            {canvasPreset === 'custom' && (
+              <div className="dimension-grid home-dimensions">
+                <label>너비<input aria-label="새 프로젝트 사용자 지정 너비" type="number" min="320" max="4096" value={customSize.width} onChange={(event) => setCustomSize((size) => normalizeCardSize({ ...size, width: Number(event.target.value) }))} /></label>
+                <label>높이<input aria-label="새 프로젝트 사용자 지정 높이" type="number" min={customSize.width} max="4096" value={customSize.height} onChange={(event) => setCustomSize((size) => normalizeCardSize({ ...size, height: Number(event.target.value) }))} /></label>
+              </div>
+            )}
             <button className="primary" type="submit">새 프로젝트 만들기</button>
           </form>
         </section>
@@ -93,12 +142,12 @@ function ProjectHome() {
             <div className="project-grid">
               {projects.map((project) => (
                 <article className="project-card" key={project.id}>
-                  <button className="project-preview" type="button" onClick={() => openProject(project.id)} aria-label={`${project.name} 열기`}>
-                    <div className="project-scale"><CardRenderer page={project.pages[0]} pageIndex={0} pageCount={project.pages.length} /></div>
+                  <button className="project-preview" type="button" style={{width:project.canvasSize.width*Math.min(190/project.canvasSize.width,238/project.canvasSize.height),height:project.canvasSize.height*Math.min(190/project.canvasSize.width,238/project.canvasSize.height)}} onClick={() => openProject(project.id)} aria-label={`${project.name} 열기`}>
+                    <div className="project-scale" style={{width:project.canvasSize.width,height:project.canvasSize.height,transform:`translateX(-50%) scale(${Math.min(190/project.canvasSize.width,238/project.canvasSize.height)})`}}><CardRenderer page={project.pages[0]} pageIndex={0} pageCount={project.pages.length} size={project.canvasSize} /></div>
                   </button>
                   <div className="project-card-body">
                     <input aria-label="프로젝트 이름 바꾸기" value={project.name} maxLength={80} onChange={(event) => renameProject(project.id, event.target.value)} />
-                    <p>{project.pages.length}장 <span aria-hidden="true">/</span> <time dateTime={project.updatedAt}>{new Date(project.updatedAt).toLocaleString('ko-KR')}</time></p>
+                    <p>{project.pages.length}장 <span aria-hidden="true">/</span> {formatCardSize(project.canvasSize)} <span aria-hidden="true">/</span> <time dateTime={project.updatedAt}>{new Date(project.updatedAt).toLocaleString('ko-KR')}</time></p>
                     <div className="button-row project-actions">
                       <button type="button" onClick={() => openProject(project.id)}>열기</button>
                       <button type="button" className="subtle" onClick={() => duplicateProject(project.id)}>복제</button>
@@ -154,11 +203,11 @@ function Feed({ project, onClose }: { project: Project; onClose: () => void }) {
         </header>
         {mode === 'grid' ? (
           <div className="feed-grid" aria-label="전체 카드 격자">
-            {project.pages.map((page, pageIndex) => <div className="feed-card" key={page.id}><div><CardRenderer page={page} pageIndex={pageIndex} pageCount={project.pages.length} /></div></div>)}
+            {project.pages.map((page, pageIndex) => {const scale=300/project.canvasSize.width;return <div className="feed-card" style={{aspectRatio:`${project.canvasSize.width} / ${project.canvasSize.height}`}} key={page.id}><div style={{width:project.canvasSize.width,height:project.canvasSize.height,transform:`scale(${scale})`}}><CardRenderer page={page} pageIndex={pageIndex} pageCount={project.pages.length} size={project.canvasSize} /></div></div>})}
           </div>
         ) : (
           <div className="post-view">
-            <PreviewPane page={project.pages[index]} pageIndex={index} pageCount={project.pages.length} />
+            <PreviewPane page={project.pages[index]} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} />
             <div className="button-row post-controls">
               <button type="button" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>이전</button>
               <span aria-live="polite">{index + 1} / {project.pages.length}</span>
@@ -259,14 +308,14 @@ function Editor() {
 
       <main className="workspace" id="main-content">
         <div className={`mobile-panel ${panel === 'pages' ? 'shown' : ''}`}>
-          <PagePanel pages={project.pages} activeId={page.id} onSelect={store.setActivePage} onReorder={store.reorderPages} onAdd={() => store.addPage()} onDuplicate={() => store.duplicatePage(page.id)} onDelete={() => { if (project.pages.length > 1 && confirm('이 페이지를 삭제할까요?')) store.deletePage(page.id) }} />
+          <PagePanel pages={project.pages} activeId={page.id} size={project.canvasSize} onSelect={store.setActivePage} onReorder={store.reorderPages} onAdd={() => store.addPage()} onDuplicate={() => store.duplicatePage(page.id)} onDelete={() => { if (project.pages.length > 1 && confirm('이 페이지를 삭제할까요?')) store.deletePage(page.id) }} />
         </div>
         <section className={`preview-panel mobile-panel ${panel === 'preview' ? 'shown' : ''}`} aria-labelledby="preview-heading">
           <div className="preview-title">
             <h1 id="preview-heading">카드 미리보기</h1>
-            <div><span>{index + 1} / {project.pages.length}</span><span>1080 × 1350</span></div>
+            <div><span>{index + 1} / {project.pages.length}</span><span>{formatCardSize(project.canvasSize)}</span></div>
           </div>
-          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} interactive onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
+          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
           <p className="preview-help">떠있는 이미지는 드래그하거나 방향키로 이동할 수 있습니다.</p>
         </section>
         <aside className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
@@ -274,6 +323,7 @@ function Editor() {
             <div><span className="panel-kicker">선택한 카드</span><h2 id="editor-heading">내용 편집</h2></div>
             <button type="button" onClick={() => store.addPage(page.templateId)}>같은 템플릿 추가</button>
           </div>
+          <CanvasSizeControl key={project.id} size={project.canvasSize} onChange={(canvasSize) => store.updateProjectCanvasSize(project.id, canvasSize)} />
           <FieldEditor page={page} onChange={(patch) => store.updatePage(page.id, patch)} onTemplateChange={(id) => store.replacePageTemplate(page.id, id)} />
         </aside>
       </main>

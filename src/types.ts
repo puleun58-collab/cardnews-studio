@@ -2,6 +2,8 @@ import type { ComponentType } from 'react'
 
 export type TemplateId = 'cover-hook' | 'midnight-quote' | 'quote-basic' | 'list-insight' | 'quote-commentary' | 'image-text' | 'divider-closing'
 export type FontId = 'kopub-batang' | 'kopub-batang-bold' | 'kopub-dotum' | 'pretendard'
+export type CardSizePreset = 'portrait' | 'square' | 'story' | 'custom'
+export interface CardSize { width: number; height: number }
 
 export interface CardDesignSettings {
   backgroundColor: string
@@ -21,7 +23,7 @@ export interface CardPage {
   overlayImage?: CardOverlayImage | null
   design?: CardDesignSettings
 }
-export interface Project { schemaVersion: number; id: string; name: string; createdAt: string; updatedAt: string; pages: CardPage[] }
+export interface Project { schemaVersion: number; id: string; name: string; createdAt: string; updatedAt: string; canvasSize: CardSize; pages: CardPage[] }
 export interface FieldDef { key: string; label: string; type: 'text' | 'textarea' | 'list' | 'image'; placeholder?: string; maxLength?: number; required?: boolean }
 export type DesignCapability = 'backgroundColor' | 'textColor' | 'fontId' | 'fontSize' | 'letterSpacing' | 'showPageNumber'
 export interface CardProps { page: CardPage; pageIndex: number; pageCount: number; forExport?: boolean; reportOverflow?: boolean }
