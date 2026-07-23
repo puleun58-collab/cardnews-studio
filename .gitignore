@@ -44,3 +44,5 @@ blob-report/
 # Windows metadata
 Thumbs.db
 Desktop.ini
+
+.vercel
