@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import { fontFamilies, fontIds, normalizeDesign } from '../brand/midnightDesign'
 import { DEFAULT_OVERLAY_IMAGE } from '../engine/overlayImage'
 import { imageFileToDataUrl } from '../engine/imageTools'
@@ -45,9 +45,12 @@ function TemplateThumbnail({ manifest, size }: { manifest: TemplateManifest; siz
 
 export function FieldEditor({ page, size, hasOverflow = false, onChange, onTemplateChange }: Props) {
   const manifest = templateRegistry[page.templateId]
+  const primaryImageInput = useRef<HTMLInputElement>(null)
   const overlayInput = useRef<HTMLInputElement>(null)
-  const imageInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
+  const [dragging, setDragging] = useState(false)
+  const hasTemplateImage = manifest.fields.some((field) => field.type === 'image')
+  const activeImage = hasTemplateImage ? page.image : page.overlayImage?.src
   const updateContent = (key: string, value: string | string[]) => onChange({ content: { ...page.content, [key]: value } })
   const upload = async (file: File | undefined, overlay: boolean) => {
     if (!file) return
@@ -59,6 +62,17 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : '이미지 처리 실패')
     }
+  }
+  const uploadPrimaryImage = (file?: File) => upload(file, !hasTemplateImage)
+  const dropPrimaryImage = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setDragging(false)
+    void uploadPrimaryImage(event.dataTransfer.files[0])
+  }
+  const removePrimaryImage = () => {
+    setError('')
+    if (hasTemplateImage) onChange({ image: null })
+    else onChange({ overlayImage: null })
   }
   const design = normalizeDesign(page.design)
 
@@ -88,6 +102,36 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
         </div>
       </details>
 
+      <section className="image-upload-section" aria-labelledby="image-upload-title">
+        <div className="image-upload-heading">
+          <div>
+            <h3 id="image-upload-title">이미지 업로드</h3>
+            <p>{hasTemplateImage ? '선택한 템플릿의 사진 영역에 적용됩니다.' : '카드 위에서 이동할 수 있는 이미지로 추가됩니다.'}</p>
+          </div>
+          {activeImage && <button type="button" className="subtle image-remove" onClick={removePrimaryImage}>삭제</button>}
+        </div>
+        <input ref={primaryImageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadPrimaryImage(event.target.files?.[0])} />
+        <div
+          className={`image-dropzone ${dragging ? 'is-dragging' : ''} ${activeImage ? 'has-image' : ''}`}
+          onDragEnter={(event) => { if (event.dataTransfer.types.includes('Files')) setDragging(true) }}
+          onDragOver={(event) => event.preventDefault()}
+          onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false) }}
+          onDrop={dropPrimaryImage}
+        >
+          {activeImage && <img src={activeImage} alt="" aria-hidden="true" />}
+          <button type="button" onClick={() => primaryImageInput.current?.click()} aria-label={activeImage ? '이미지 교체' : '이미지 업로드'}>
+            <span className="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" focusable="false">
+                <path d="M16 22V5m0 0-6 6m6-6 6 6M7 20v5.5A2.5 2.5 0 0 0 9.5 28h13a2.5 2.5 0 0 0 2.5-2.5V20" />
+              </svg>
+            </span>
+            <strong>{dragging ? '여기에 놓으세요' : activeImage ? '이미지 교체' : '이미지 업로드'}</strong>
+            <span>클릭하거나 드래그 앤 드롭</span>
+            <small>JPG · PNG · WEBP · 최대 20MB</small>
+          </button>
+        </div>
+      </section>
+
       {hasOverflow && (
         <div className="overflow-warning" role="status">
           <strong>텍스트가 안전 영역을 넘었습니다</strong>
@@ -98,16 +142,7 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
       <section className="content-fields" aria-label="카드 내용">
         {manifest.fields.map((field) => {
           if (field.type === 'image') {
-            return (
-              <div className="field-group" key={field.key}>
-                <span>{field.label}</span>
-                <input ref={imageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target.files?.[0], false)} />
-                <div className="button-row">
-                  <button type="button" onClick={() => imageInput.current?.click()}>{page.image ? '이미지 교체' : '이미지 선택'}</button>
-                  {page.image && <button type="button" className="subtle" onClick={() => onChange({ image: null })}>삭제</button>}
-                </div>
-              </div>
-            )
+            return null
           }
 
           const value = field.type === 'list'
@@ -220,14 +255,14 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
       <details className="control-disclosure image-controls">
         <summary>떠있는 이미지</summary>
         <div className="advanced-controls">
-          <input ref={overlayInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target.files?.[0], true)} />
+          <input ref={overlayInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload(event.target.files?.[0], true)} />
           <div className="button-row">
-            <button type="button" onClick={() => overlayInput.current?.click()}>{page.overlayImage ? '이미지 교체' : '이미지 선택'}</button>
+            <button type="button" onClick={() => overlayInput.current?.click()}>{page.overlayImage ? '이미지 교체' : '이미지 추가'}</button>
             {page.overlayImage && <button type="button" className="danger" onClick={() => onChange({ overlayImage: null })}>삭제</button>}
           </div>
           {page.overlayImage && (
             <>
-              <img className="overlay-thumb" src={page.overlayImage.src} alt="떠있는 이미지 미리보기" />
+              <img className="overlay-thumb" src={page.overlayImage.src} alt="추가한 이미지 미리보기" />
               <label>너비 <output>{page.overlayImage.width}%</output><input aria-label={`떠있는 이미지 너비 ${page.overlayImage.width}%`} type="range" min="12" max="100" value={page.overlayImage.width} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, width: Number(event.target.value) } })} /></label>
               <label>가로 위치 <output>{page.overlayImage.x}%</output><input aria-label={`가로 위치 ${page.overlayImage.x}%`} type="range" min="0" max="100" value={page.overlayImage.x} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, x: Number(event.target.value) } })} /></label>
               <label>세로 위치 <output>{page.overlayImage.y}%</output><input aria-label={`세로 위치 ${page.overlayImage.y}%`} type="range" min="0" max="100" value={page.overlayImage.y} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, y: Number(event.target.value) } })} /></label>

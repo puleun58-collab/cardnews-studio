@@ -55,17 +55,14 @@ function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size
 
 function ProjectHome() {
   const { projects, createProject, openProject, duplicateProject, deleteProject, renameProject } = useStudioStore()
-  const [startMode, setStartMode] = useState<'template' | 'image'>('template')
   const [name, setName] = useState('나의 카드뉴스')
   const [template, setTemplate] = useState<TemplateId>('midnight-quote')
   const [compositionId, setCompositionId] = useState('single')
   const [canvasPreset, setCanvasPreset] = useState<CardSizePreset>('portrait')
   const [customSize, setCustomSize] = useState<CardSize>({ width: 1080, height: 1440 })
-  const [homeImage, setHomeImage] = useState<File | null>(null)
   const [homeError, setHomeError] = useState('')
   const [creating, setCreating] = useState(false)
   const nameInput = useRef<HTMLInputElement>(null)
-  const imageInput = useRef<HTMLInputElement>(null)
   const composition = compositions.find((item) => item.id === compositionId)!
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -74,16 +71,7 @@ function ProjectHome() {
       setHomeError('')
       setCreating(true)
       const canvasSize = canvasPreset === 'custom' ? normalizeCardSize(customSize) : cardSizePresets[canvasPreset]
-      if (startMode === 'image') {
-        if (!homeImage) {
-          setHomeError('시작할 이미지를 선택해 주세요.')
-          return
-        }
-        const src = await imageFileToDataUrl(homeImage)
-        createProject(name, 'image-text', ['image-text'], canvasSize, src)
-      } else {
-        createProject(name, template, compositionId === 'single' ? [template] : composition.templates, canvasSize)
-      }
+      createProject(name, template, compositionId === 'single' ? [template] : composition.templates, canvasSize)
     } catch (error) {
       setHomeError(error instanceof Error ? error.message : '프로젝트를 만들 수 없습니다.')
     } finally {
@@ -110,29 +98,17 @@ function ProjectHome() {
             <p>한 장의 문장부터 7장 인사이트까지,<br />필요한 구성으로 바로 시작할 수 있습니다.</p>
           </div>
           <form className="new-project-form" onSubmit={submit}>
-            <div className="start-mode" role="group" aria-label="시작 방식">
-              <button type="button" aria-pressed={startMode === 'template'} onClick={() => setStartMode('template')}>템플릿으로 시작</button>
-              <button type="button" aria-pressed={startMode === 'image'} onClick={() => setStartMode('image')}>이미지로 시작</button>
-            </div>
             <label>
               프로젝트 이름
               <input ref={nameInput} aria-label="프로젝트 이름" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
             </label>
-            {startMode === 'template' ? (
-              <label>
-                추천 구성
-                <select aria-label="추천 구성" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
-                  {compositions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-              </label>
-            ) : (
-              <div className="home-image-field">
-                <span>시작 이미지</span>
-                <input ref={imageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setHomeImage(event.target.files?.[0] ?? null)} />
-                <button type="button" onClick={() => imageInput.current?.click()}>{homeImage ? homeImage.name : '이미지 선택'}</button>
-              </div>
-            )}
-            {startMode === 'template' && compositionId === 'single' && (
+            <label>
+              추천 구성
+              <select aria-label="추천 구성" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
+                {compositions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
+            {compositionId === 'single' && (
               <label>
                 첫 템플릿
                 <select value={template} onChange={(event) => setTemplate(event.target.value as TemplateId)}>

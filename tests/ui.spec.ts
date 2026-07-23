@@ -29,14 +29,29 @@ test('사진과 같은 5개 글꼴, 실행 취소와 다시 실행, 캔버스 �
   await expect(page.locator('.preview-panel .scaled-card')).toHaveCSS('width','1080px')
 })
 
-test('이미지로 시작하고 캔버스에서 이미지를 추가한다',async({page})=>{
+test('글꼴을 바꿔도 편집 패널 스크롤 위치가 유지된다',async({page})=>{
+  await page.setViewportSize({width:1440,height:900})
+  await create(page)
+  const editor=page.locator('.editor-panel')
+  const fonts=page.locator('.font-options')
+  await fonts.scrollIntoViewIfNeeded()
+  const before=await editor.evaluate((element)=>element.scrollTop)
+  for(const name of ['Noto Sans KR','Bebas Neue','Georgia','Courier New','Pretendard']){
+    await fonts.getByText(name,{exact:false}).click()
+    await expect.poll(()=>editor.evaluate((element)=>element.scrollTop)).toBe(before)
+  }
+})
+
+test('통합 이미지 업로드와 캔버스 이미지 추가가 동작한다',async({page})=>{
   await page.goto('/')
   await page.evaluate(()=>localStorage.clear())
   await page.reload()
-  await page.getByRole('button',{name:'이미지로 시작'}).click()
-  await page.locator('.home-image-field input[type=file]').setInputFiles({name:'start.png',mimeType:'image/png',buffer:pixel})
+  await expect(page.getByRole('button',{name:'이미지로 시작'})).toHaveCount(0)
+  await page.getByLabel('추천 구성').selectOption('single')
+  await page.getByLabel('첫 템플릿').selectOption('image-text')
   await page.getByRole('button',{name:'새 프로젝트 만들기'}).click()
   await expect(page.locator('.preview-panel [data-template="image-text"]').first()).toBeVisible()
+  await page.locator('.image-upload-section input[type=file]').setInputFiles({name:'start.png',mimeType:'image/png',buffer:pixel})
   await expect(page.locator('.preview-panel .hero-image img').first()).toBeVisible()
 
   await selectTemplate(page,'미드나이트 문장','midnight-quote')
