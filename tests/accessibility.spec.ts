@@ -88,6 +88,6 @@ test('home visual foundation stays white and loads the display font', async ({ p
   await expect.poll(() => page.locator('.brand-mark').evaluate((node) => ({
     stroke: getComputedStyle(node, '::before').borderTopWidth,
     opening: getComputedStyle(node, '::after').height,
-  }))).toEqual({ stroke: '3px', opening: '14px' })
+  }))).toEqual({ stroke: '4px', opening: '14px' })
   await expect(page.locator('.new-project-intro p span')).toHaveCount(2)
 })
