@@ -10,7 +10,7 @@ export interface AppConfig {
   maxImagePixels: number
 }
 export const appConfig: AppConfig = {
-  appName: '카드뉴스 스튜디오',
+  appName: 'CARDNEWS STUDIO',
   appDescription: '글과 사진으로 만드는 세로형 카드뉴스',
   accountLabel: '@hageon',
   fileSlug: 'my-card-studio',

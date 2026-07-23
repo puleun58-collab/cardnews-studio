@@ -19,6 +19,9 @@ export interface CardSize { width: number; height: number }
 export interface CardDesignSettings {
   backgroundColor: string
   textColor: string
+  gradientEnabled: boolean
+  gradientRange: number
+  gradientStrength: number
   fontId: KoreanFontId
   englishFontId: EnglishFontId
   fontSize: number
@@ -42,7 +45,7 @@ export interface CardPage {
 }
 export interface Project { schemaVersion: number; id: string; name: string; createdAt: string; updatedAt: string; canvasSize: CardSize; pages: CardPage[] }
 export interface FieldDef { key: string; label: string; type: 'text' | 'textarea' | 'list' | 'image'; placeholder?: string; maxLength?: number; required?: boolean }
-export type DesignCapability = 'backgroundColor' | 'textColor' | 'fontId' | 'fontSize' | 'letterSpacing' | 'lineHeight' | 'textAlign' | 'verticalAlign' | 'contentWidth' | 'showPageNumber'
+export type DesignCapability = 'backgroundColor' | 'textColor' | 'gradient' | 'fontId' | 'fontSize' | 'letterSpacing' | 'lineHeight' | 'textAlign' | 'verticalAlign' | 'contentWidth' | 'showPageNumber'
 export interface CardProps { page: CardPage; pageIndex: number; pageCount: number; forExport?: boolean; reportOverflow?: boolean }
 export interface TemplateManifest {
   id: TemplateId

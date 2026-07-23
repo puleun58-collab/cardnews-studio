@@ -82,7 +82,7 @@ function ProjectHome() {
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <main className="home" id="main-content">
         <header className="home-header" aria-label="서비스 소개">
-          <div className="brand-mark" aria-hidden="true">H</div>
+          <div className="brand-mark" aria-hidden="true"><span /></div>
           <div className="home-brand-copy">
             <h1>{appConfig.appName}</h1>
             <p>{appConfig.appDescription}</p>
@@ -93,7 +93,10 @@ function ProjectHome() {
           <div className="new-project-intro">
             <span className="section-label">새 작업</span>
             <h2 id="new-project-title">새 이야기를 시작하세요</h2>
-            <p>한 장의 문장부터 7장 인사이트까지,<br />필요한 구성으로 바로 시작할 수 있습니다.</p>
+            <p>
+              <span>단일 카드부터 7장 인사이트 스토리까지,</span>
+              <span>필요한 구성으로 바로 시작할 수 있습니다.</span>
+            </p>
           </div>
           <form className="new-project-form" onSubmit={submit}>
             <label>

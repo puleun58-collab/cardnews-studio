@@ -13,13 +13,16 @@ const Footer = ({ page, pageIndex, pageCount }: CardProps) => {
 export function CoverHook(props: CardProps) { return <div className="template cover"><div className="eyebrow">{text(props.page, 'kicker')}</div><AutoFit as="h1" max={92} min={54}>{richText(text(props.page, 'title'))}</AutoFit><p>{text(props.page, 'subtitle')}</p><Footer {...props}/></div> }
 export function MidnightQuote(props: CardProps) {
   const d = normalizeDesign(props.page.design)
+  const gradient = d.gradientEnabled
+    ? `linear-gradient(180deg, transparent ${100 - d.gradientRange}%, rgb(0 0 0 / ${d.gradientStrength}%) 100%)`
+    : undefined
   const bodyStyle: CSSProperties = {
     alignItems: d.verticalAlign === 'top' ? 'flex-start' : d.verticalAlign === 'bottom' ? 'flex-end' : 'center',
     justifyContent: d.textAlign === 'left' ? 'flex-start' : d.textAlign === 'right' ? 'flex-end' : 'center',
     textAlign: d.textAlign,
     lineHeight: d.lineHeight,
   }
-  return <div className="template midnight" style={{ backgroundColor: d.backgroundColor, color: d.textColor, fontFamily: getCardFontFamily(d.fontId, d.englishFontId) }}>
+  return <div className="template midnight" style={{ backgroundColor: d.backgroundColor, backgroundImage: gradient, color: d.textColor, fontFamily: getCardFontFamily(d.fontId, d.englishFontId) }}>
     <div className="kicker">{text(props.page, 'kicker')}</div><span className="quote open">“</span>
     <AutoFit as="blockquote" max={d.fontSize} min={40} style={{ ...bodyStyle, letterSpacing: `${d.letterSpacing / 100}em`, fontWeight: 400 }}><span style={{width:`${d.contentWidth}%`}}>{richText(text(props.page, 'body'))}</span></AutoFit>
     <span className="quote close">”</span><div className="source">{text(props.page, 'source')}</div><div className="note">{text(props.page, 'note')}</div><Footer {...props}/>

@@ -210,6 +210,22 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
               </label>
             )}
           </div>
+          {manifest.capabilities.includes('gradient') && (
+            <div className="gradient-controls">
+              <label className="check">
+                <input type="checkbox" checked={design.gradientEnabled} onChange={(event) => onChange({ design: { ...design, gradientEnabled: event.target.checked } })} />
+                그라데이션 사용
+              </label>
+              <div className="gradient-range-controls" aria-disabled={!design.gradientEnabled}>
+                <label>그라데이션 범위 <output>{design.gradientRange}%</output>
+                  <input aria-label={`그라데이션 범위 ${design.gradientRange}%`} disabled={!design.gradientEnabled} type="range" min="0" max="100" step="5" value={design.gradientRange} onChange={(event) => onChange({ design: { ...design, gradientRange: Number(event.target.value) } })} />
+                </label>
+                <label>그라데이션 강도 <output>{design.gradientStrength}%</output>
+                  <input aria-label={`그라데이션 강도 ${design.gradientStrength}%`} disabled={!design.gradientEnabled} type="range" min="0" max="100" step="5" value={design.gradientStrength} onChange={(event) => onChange({ design: { ...design, gradientStrength: Number(event.target.value) } })} />
+                </label>
+              </div>
+            </div>
+          )}
           {manifest.capabilities.includes('fontId') && (
             <div className="typography-pickers">
               <fieldset className="font-picker">

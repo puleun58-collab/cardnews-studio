@@ -39,6 +39,9 @@ const legacyEnglishFonts: Record<string, EnglishFontId> = {
 export const defaultDesign: CardDesignSettings = {
   backgroundColor: brandTokens.color.midnight,
   textColor: brandTokens.color.white,
+  gradientEnabled: false,
+  gradientRange: 50,
+  gradientStrength: 35,
   fontId: 'pretendard',
   englishFontId: 'manrope',
   fontSize: 62,
@@ -62,6 +65,9 @@ export function normalizeDesign(value?: Partial<CardDesignSettings>): CardDesign
   return {
     backgroundColor: color(value?.backgroundColor, defaultDesign.backgroundColor),
     textColor: color(value?.textColor, defaultDesign.textColor),
+    gradientEnabled: value?.gradientEnabled === true,
+    gradientRange: clamp(Number(value?.gradientRange ?? defaultDesign.gradientRange), 0, 100),
+    gradientStrength: clamp(Number(value?.gradientStrength ?? defaultDesign.gradientStrength), 0, 100),
     fontId,
     englishFontId,
     fontSize: clamp(Number(value?.fontSize ?? defaultDesign.fontSize), 40, 84),

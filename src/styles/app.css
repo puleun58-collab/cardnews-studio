@@ -148,18 +148,24 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   margin-bottom: 64px;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
+  position: relative;
   width: 54px;
   height: 54px;
-  border: 1px solid var(--ui-accent);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ui-accent);
-  font-size: 23px;
-  font-weight: 800;
+  flex: 0 0 auto;
 }
-.home-header h1 { margin: 0; color: var(--ui-text); font: 600 clamp(25px, 2.2vw, 32px)/1.2 var(--font-display); letter-spacing: -.045em; }
+.brand-mark::before,
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  width: 31px;
+  height: 39px;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-canvas);
+}
+.brand-mark::before { left: 6px; top: 5px; }
+.brand-mark::after { right: 5px; bottom: 4px; border-color: var(--ui-accent); }
+.brand-mark span { position: absolute; right: 12px; bottom: 12px; z-index: 1; width: 13px; height: 2px; background: var(--ui-accent); }
+.home-header h1 { margin: 0; color: var(--ui-text); font: 650 clamp(23px, 2.2vw, 30px)/1.2 "Manrope Variable", var(--font-ui); letter-spacing: .035em; }
 .home-header p { margin: 5px 0 0; color: var(--ui-text-muted); line-height: 1.5; }
 
 .new-project {
@@ -171,7 +177,8 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   padding: clamp(44px, 5vw, 68px) 0;
 }
 .new-project-intro h2 { max-width: 11ch; margin: 12px 0 18px; font: 500 clamp(38px, 4.2vw, 62px)/1.16 var(--font-display); letter-spacing: -.06em; text-wrap: balance; }
-.new-project-intro p { max-width: 38ch; margin: 0; color: var(--ui-text-muted); line-height: 1.7; text-wrap: pretty; }
+.new-project-intro p { max-width: 38ch; margin: 0; color: var(--ui-text-muted); line-height: 1.7; }
+.new-project-intro p span { display: block; white-space: nowrap; }
 .new-project-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; align-items: end; border-left: 1px solid var(--ui-border); padding-left: clamp(32px, 4vw, 60px); }
 .home-image-field { display: grid; gap: 7px; color: var(--ui-text); font-size: 13px; font-weight: 600; }
 .home-image-field button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -348,6 +355,9 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 .design-controls output, .advanced-controls output { justify-self: end; color: var(--ui-accent); font-variant-numeric: tabular-nums; }
 .design-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .design-color-grid .color-row { grid-template-columns: 44px minmax(0, 1fr); }
+.gradient-controls { display: grid; gap: 12px; border-top: 1px solid var(--ui-border); padding-top: 14px; }
+.gradient-range-controls { display: grid; gap: 12px; }
+.gradient-range-controls[aria-disabled="true"] { opacity: .48; }
 .font-picker, .segmented-control { min-width: 0; margin: 0; border: 0; padding: 0; }
 .font-picker legend, .segmented-control legend { margin-bottom: 8px; color: #d2d8e4; font-size: 13px; font-weight: 600; }
 .typography-pickers { display: grid; gap: var(--space-5); }
@@ -404,6 +414,7 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   .home-header { grid-template-columns: auto 1fr; margin-bottom: 40px; }
   .new-project { grid-template-columns: 1fr; gap: 34px; padding: 36px 0; }
   .new-project-intro h2 { max-width: 13ch; font-size: clamp(34px, 9vw, 46px); }
+  .new-project-intro p span { white-space: normal; }
   .new-project-form { grid-template-columns: 1fr; border-top: 1px solid var(--ui-border); border-left: 0; padding: 30px 0 0; }
   .home-form-error { grid-column: auto; }
   .project-section { margin-top: 56px; }
@@ -457,7 +468,8 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 
 @media (max-width: 420px) {
   .home-header { gap: 12px; }
-  .brand-mark { width: 48px; height: 48px; border-radius: 4px; }
+  .brand-mark { width: 48px; height: 48px; }
+  .brand-mark::before, .brand-mark::after { width: 28px; height: 35px; }
   .home-header h1 { font-size: 23px; }
   .home-header p { font-size: 12px; }
   .section-title h2 { font-size: 22px; }
