@@ -82,7 +82,7 @@ function ProjectHome() {
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <main className="home" id="main-content">
         <header className="home-header" aria-label="서비스 소개">
-          <div className="brand-mark" aria-hidden="true"><span /></div>
+          <div className="brand-mark" data-logo="c-frame" aria-hidden="true" />
           <div className="home-brand-copy">
             <h1>{appConfig.appName}</h1>
             <p>{appConfig.appDescription}</p>

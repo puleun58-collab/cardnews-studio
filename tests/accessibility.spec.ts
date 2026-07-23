@@ -83,6 +83,7 @@ test('home visual foundation stays white and loads the display font', async ({ p
   expect(result.headingFont).toContain('Noto Serif KR Variable')
   expect(result.overflow).toBe(0)
   await expect(page.getByRole('heading', { level: 1, name: 'CARDNEWS STUDIO' })).toBeVisible()
+  await expect(page.locator('.brand-mark')).toHaveAttribute('data-logo', 'c-frame')
   await expect(page.locator('.brand-mark')).toHaveText('')
   await expect(page.locator('.new-project-intro p span')).toHaveCount(2)
 })
