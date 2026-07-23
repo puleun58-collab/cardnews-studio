@@ -7,7 +7,7 @@
 
 ## 배포 주소
 
-- 프로덕션: [https://cardnews-studio-inky.vercel.app](https://cardnews-studio-inky.vercel.app)
+- 프로덕션: [https://cardnews-studio.vercel.app](https://cardnews-studio.vercel.app)
 - 최신 배포는 Vercel 프로덕션 별칭에 연결됩니다.
 
 ## 1. 설치 방법
@@ -233,7 +233,7 @@ npm run verify:ui
 브라우저에서 `Ctrl + Shift + R`로 강력 새로고침합니다. 배포 상태는 다음 명령으로 확인할 수 있습니다.
 
 ```powershell
-npx vercel inspect https://cardnews-studio-inky.vercel.app
+npx vercel inspect https://cardnews-studio.vercel.app
 ```
 
 ## 6. 데이터와 보안
