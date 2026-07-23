@@ -57,3 +57,17 @@ test('저장 용량 오류를 사용자에게 표시', async ({ page }) => {
   await page.getByRole('button', { name: '새 프로젝트 만들기' }).click()
   await expect(page.locator('.save-status')).toContainText('저장 공간이 부족합니다')
 })
+
+test('신규 목록에서 제외된 기본 인용 템플릿을 이전 JSON에서 복원', async ({ page }) => {
+  await home(page)
+  const legacy = project()
+  legacy.pages[0] = {
+    ...legacy.pages[0],
+    templateId: 'quote-basic',
+    content: { quote: '이전 인용문', source: '이전 출처', description: '호환성 설명' },
+  }
+  await page.locator('input[accept*="json"]').setInputFiles({ name: 'legacy-quote.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, project: legacy })) })
+  await expect(page.locator('.card-root').first()).toHaveAttribute('data-template', 'quote-basic')
+  await expect(page.getByLabel('템플릿').locator('option[value="quote-basic"]')).toHaveCount(0)
+  await expect(page.locator('.quote-basic').first()).toContainText('이전 인용문')
+})

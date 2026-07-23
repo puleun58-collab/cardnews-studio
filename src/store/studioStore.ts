@@ -34,11 +34,12 @@ function normalizeProject(raw: unknown): Project {
 }
 interface StudioState {
   projects: Project[]; activeProjectId: string | null; activePageId: string | null; storageError: string | null
-  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[], canvasSize?: CardSize): void; openProject(id: string): void; goHome(): void
+  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[], canvasSize?: CardSize, initialImage?: string): void; openProject(id: string): void; goHome(): void
   renameProject(id: string, name: string): void; duplicateProject(id: string): void; deleteProject(id: string): void
   updateProjectCanvasSize(id: string, canvasSize: CardSize): void
   setActivePage(id: string): void; addPage(templateId?: TemplateId): void; duplicatePage(id: string): void; deletePage(id: string): void; reorderPages(oldIndex: number, newIndex: number): void
   updatePage(id: string, patch: Partial<CardPage>): void; replacePageTemplate(id: string, templateId: TemplateId): void
+  restoreActiveProject(project: Project, activePageId?: string | null): void
   importProject(text: string): void; clearStorageError(): void
 }
 const initial = (() => {
@@ -55,7 +56,7 @@ const initial = (() => {
 })()
 export const useStudioStore = create<StudioState>((set, get) => ({
   projects:initial.projects, activeProjectId:initial.activeProjectId, activePageId:initial.activePageId, storageError:null,
-  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
+  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize, initialImage) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); if(initialImage)pages[0]={...pages[0],image:initialImage}; const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
   openProject(id) { const p=get().projects.find(x=>x.id===id); if(p) set({activeProjectId:id,activePageId:p.pages[0]?.id??null}) }, goHome(){set({activeProjectId:null,activePageId:null})},
   renameProject(id,name){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,name:name.trim()||p.name,updatedAt:now()}:p)}))},
   duplicateProject(id){set(s=>{const src=s.projects.find(p=>p.id===id); if(!src)return s; const copy:Project={...structuredClone(src),id:uid(),name:`${src.name} 복사본`,createdAt:now(),updatedAt:now(),pages:src.pages.map(p=>({...structuredClone(p),id:uid()}))}; return {projects:[copy,...s.projects]}})},
@@ -68,6 +69,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   reorderPages(oldIndex,newIndex){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId)return p; const pages=[...p.pages]; const [item]=pages.splice(oldIndex,1); pages.splice(newIndex,0,item); return {...p,pages,updatedAt:now()}})}))},
   updatePage(id,patch){set(s=>({projects:s.projects.map(p=>p.id!==s.activeProjectId?p:{...p,updatedAt:now(),pages:p.pages.map(page=>page.id===id?{...page,...patch,design:patch.design?normalizeDesign(patch.design):page.design,overlayImage:patch.overlayImage===undefined?page.overlayImage:normalizeOverlayImage(patch.overlayImage)}:page)})}))},
   replacePageTemplate(id,templateId){const replacement=createPage(templateId); get().updatePage(id,{...replacement,id})},
+  restoreActiveProject(project,activePageId){set(s=>{if(project.id!==s.activeProjectId)return s;const restored=structuredClone(project);const nextPageId=activePageId&&restored.pages.some(page=>page.id===activePageId)?activePageId:restored.pages[0]?.id??null;return {projects:s.projects.map(item=>item.id===restored.id?restored:item),activePageId:nextPageId}})},
   importProject(text){if(new Blob([text]).size>appConfig.maxJsonBytes)throw new Error('JSON 파일은 6MB 이하여야 합니다.'); const parsed=JSON.parse(text); if(Number(parsed.schemaVersion)>1)throw new Error('더 새로운 버전의 파일입니다. 앱을 업데이트해주세요.'); const project=normalizeProject(parsed.project??parsed); project.id=uid(); set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id}))}, clearStorageError(){set({storageError:null})}
 }))
 useStudioStore.subscribe(state=>{try{localStorage.setItem(appConfig.storageKey,JSON.stringify({projects:state.projects,activeProjectId:state.activeProjectId,activePageId:state.activePageId}))}catch{if(!state.storageError)useStudioStore.setState({storageError:'저장 공간이 부족합니다. 이미지를 줄이거나 JSON으로 백업해주세요.'})}})

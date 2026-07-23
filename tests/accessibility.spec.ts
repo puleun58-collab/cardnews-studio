@@ -21,6 +21,12 @@ test('홈과 편집기에 자동 접근성 위반이 없다', async ({ page }) =
   await page.getByRole('button', { name: '새 프로젝트 만들기' }).click()
   const editorResults = await new AxeBuilder({ page }).analyze()
   expect(editorResults.violations).toEqual([])
+
+  await page.locator('.template-picker summary').click()
+  await page.getByText('고급 설정', { exact: true }).click()
+  await page.getByText('떠있는 이미지', { exact: true }).click()
+  const expandedEditorResults = await new AxeBuilder({ page }).analyze()
+  expect(expandedEditorResults.violations).toEqual([])
 })
 
 test('축소된 모바일 viewport에서도 편집 영역과 터치 대상이 유지된다', async ({ page }) => {
@@ -77,4 +83,5 @@ test('home visual foundation stays white and loads the display font', async ({ p
   expect(result.background).toBe('rgb(255, 255, 255)')
   expect(result.headingFont).toContain('Noto Serif KR Variable')
   expect(result.overflow).toBe(0)
+  await expect(page.locator('.new-project-intro p br')).toHaveCount(1)
 })

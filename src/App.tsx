@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { appConfig } from './config/appConfig'
 import { exportProjectJson, useStudioStore } from './store/studioStore'
-import { templateList } from './registry/templateRegistry'
+import { templateList, templateRegistry } from './registry/templateRegistry'
 import { compositions } from './compositions'
 import { CardRenderer } from './components/CardRenderer'
 import { PagePanel } from './components/PagePanel'
@@ -10,12 +10,15 @@ import { FieldEditor } from './components/FieldEditor'
 import { downloadJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
 import { ExportStage } from './components/ExportStage'
 import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize } from './brand/cardSize'
+import { imageFileToDataUrl } from './engine/imageTools'
+import { DEFAULT_OVERLAY_IMAGE } from './engine/overlayImage'
 import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
 import './styles/app.css'
 import './styles/card.css'
 import './styles/fonts.css'
 
 type Panel = 'pages' | 'preview' | 'edit'
+type ZoomMode = 'fit' | 50 | 75 | 100
 type OperationStatus = { kind: 'idle' | 'loading' | 'success' | 'error'; message: string; recovery?: 'import' }
 
 function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size: CardSize) => void }) {
@@ -52,18 +55,40 @@ function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size
 
 function ProjectHome() {
   const { projects, createProject, openProject, duplicateProject, deleteProject, renameProject } = useStudioStore()
+  const [startMode, setStartMode] = useState<'template' | 'image'>('template')
   const [name, setName] = useState('나의 카드뉴스')
   const [template, setTemplate] = useState<TemplateId>('midnight-quote')
   const [compositionId, setCompositionId] = useState('single')
   const [canvasPreset, setCanvasPreset] = useState<CardSizePreset>('portrait')
   const [customSize, setCustomSize] = useState<CardSize>({ width: 1080, height: 1440 })
+  const [homeImage, setHomeImage] = useState<File | null>(null)
+  const [homeError, setHomeError] = useState('')
+  const [creating, setCreating] = useState(false)
   const nameInput = useRef<HTMLInputElement>(null)
+  const imageInput = useRef<HTMLInputElement>(null)
   const composition = compositions.find((item) => item.id === compositionId)!
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const canvasSize = canvasPreset === 'custom' ? normalizeCardSize(customSize) : cardSizePresets[canvasPreset]
-    createProject(name, template, compositionId === 'single' ? [template] : composition.templates, canvasSize)
+    try {
+      setHomeError('')
+      setCreating(true)
+      const canvasSize = canvasPreset === 'custom' ? normalizeCardSize(customSize) : cardSizePresets[canvasPreset]
+      if (startMode === 'image') {
+        if (!homeImage) {
+          setHomeError('시작할 이미지를 선택해 주세요.')
+          return
+        }
+        const src = await imageFileToDataUrl(homeImage)
+        createProject(name, 'image-text', ['image-text'], canvasSize, src)
+      } else {
+        createProject(name, template, compositionId === 'single' ? [template] : composition.templates, canvasSize)
+      }
+    } catch (error) {
+      setHomeError(error instanceof Error ? error.message : '프로젝트를 만들 수 없습니다.')
+    } finally {
+      setCreating(false)
+    }
   }
 
   return (
@@ -82,20 +107,32 @@ function ProjectHome() {
           <div className="new-project-intro">
             <span className="section-label">새 작업</span>
             <h2 id="new-project-title">새 이야기를 시작하세요</h2>
-            <p>한 장의 문장부터 5장 인사이트까지, 필요한 구성으로 바로 시작할 수 있습니다.</p>
+            <p>한 장의 문장부터 7장 인사이트까지,<br />필요한 구성으로 바로 시작할 수 있습니다.</p>
           </div>
           <form className="new-project-form" onSubmit={submit}>
+            <div className="start-mode" role="group" aria-label="시작 방식">
+              <button type="button" aria-pressed={startMode === 'template'} onClick={() => setStartMode('template')}>템플릿으로 시작</button>
+              <button type="button" aria-pressed={startMode === 'image'} onClick={() => setStartMode('image')}>이미지로 시작</button>
+            </div>
             <label>
               프로젝트 이름
               <input ref={nameInput} aria-label="프로젝트 이름" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
             </label>
-            <label>
-              추천 구성
-              <select aria-label="추천 구성" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
-                {compositions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </label>
-            {compositionId === 'single' && (
+            {startMode === 'template' ? (
+              <label>
+                추천 구성
+                <select aria-label="추천 구성" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
+                  {compositions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+              </label>
+            ) : (
+              <div className="home-image-field">
+                <span>시작 이미지</span>
+                <input ref={imageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setHomeImage(event.target.files?.[0] ?? null)} />
+                <button type="button" onClick={() => imageInput.current?.click()}>{homeImage ? homeImage.name : '이미지 선택'}</button>
+              </div>
+            )}
+            {startMode === 'template' && compositionId === 'single' && (
               <label>
                 첫 템플릿
                 <select value={template} onChange={(event) => setTemplate(event.target.value as TemplateId)}>
@@ -116,7 +153,8 @@ function ProjectHome() {
                 <label>높이<input aria-label="새 프로젝트 사용자 지정 높이" type="number" min={customSize.width} max="4096" value={customSize.height} onChange={(event) => setCustomSize((size) => normalizeCardSize({ ...size, height: Number(event.target.value) }))} /></label>
               </div>
             )}
-            <button className="primary" type="submit">새 프로젝트 만들기</button>
+            {homeError && <p className="home-form-error" role="alert">{homeError}</p>}
+            <button className="primary" type="submit" disabled={creating}>{creating ? '프로젝트 만드는 중' : '새 프로젝트 만들기'}</button>
           </form>
         </section>
 
@@ -231,8 +269,79 @@ function Editor() {
   const [feed, setFeed] = useState(false)
   const [status, setStatus] = useState<OperationStatus>({ kind: 'idle', message: '저장됨' })
   const [busy, setBusy] = useState(false)
+  const [zoom, setZoom] = useState<ZoomMode>('fit')
+  const [hasOverflow, setHasOverflow] = useState(false)
+  const historyPast = useRef<Project[]>([])
+  const historyFuture = useRef<Project[]>([])
+  const historyLast = useRef<Project | null>(null)
+  const applyingHistory = useRef(false)
+  const [, refreshHistory] = useState(0)
   const stage = useRef<ExportHandle>(null)
   const importInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!project) {
+      historyPast.current = []
+      historyFuture.current = []
+      historyLast.current = null
+      return
+    }
+    if (!historyLast.current || historyLast.current.id !== project.id) {
+      historyPast.current = []
+      historyFuture.current = []
+      historyLast.current = structuredClone(project)
+      refreshHistory((value) => value + 1)
+      return
+    }
+    if (applyingHistory.current) {
+      applyingHistory.current = false
+      historyLast.current = structuredClone(project)
+      return
+    }
+    const previous = historyLast.current
+    if (JSON.stringify(previous) !== JSON.stringify(project)) {
+      historyPast.current = [...historyPast.current, structuredClone(previous)].slice(-20)
+      historyFuture.current = []
+      historyLast.current = structuredClone(project)
+      refreshHistory((value) => value + 1)
+    }
+  }, [project])
+
+  const undo = useCallback(() => {
+    if (!project) return
+    const previous = historyPast.current.pop()
+    if (!previous) return
+    historyFuture.current = [...historyFuture.current, structuredClone(project)].slice(-20)
+    applyingHistory.current = true
+    historyLast.current = structuredClone(previous)
+    store.restoreActiveProject(previous, store.activePageId)
+    refreshHistory((value) => value + 1)
+  }, [project, store])
+
+  const redo = useCallback(() => {
+    if (!project) return
+    const next = historyFuture.current.pop()
+    if (!next) return
+    historyPast.current = [...historyPast.current, structuredClone(project)].slice(-20)
+    applyingHistory.current = true
+    historyLast.current = structuredClone(next)
+    store.restoreActiveProject(next, store.activePageId)
+    refreshHistory((value) => value + 1)
+  }, [project, store])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      const target = event.target as HTMLElement | null
+      if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
+      if (event.key.toLowerCase() !== 'z' && event.key.toLowerCase() !== 'y') return
+      event.preventDefault()
+      if (event.key.toLowerCase() === 'y' || event.shiftKey) redo()
+      else undo()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [redo, undo])
 
   if (!project) {
     return (
@@ -256,7 +365,8 @@ function Editor() {
       setBusy(true)
       setStatus({ kind: 'loading', message: `${label} 내보내는 중` })
       await action()
-      setStatus({ kind: 'success', message: `${label} 저장 완료` })
+      const detail = label === 'ZIP' ? `${project.pages.length}개 파일` : formatCardSize(project.canvasSize)
+      setStatus({ kind: 'success', message: `${label} 저장 완료 · ${detail}` })
     } catch (error) {
       setStatus({ kind: 'error', message: error instanceof Error ? error.message : `${label} 작업 실패` })
     } finally {
@@ -280,6 +390,21 @@ function Editor() {
     if (event.key === 'Escape' && feed) setFeed(false)
   }
 
+  const uploadFromCanvas = async (file: File) => {
+    try {
+      setStatus({ kind: 'loading', message: '이미지 처리 중' })
+      const src = await imageFileToDataUrl(file)
+      if (templateRegistry[page.templateId].fields.some((field) => field.type === 'image')) {
+        store.updatePage(page.id, { image: src })
+      } else {
+        store.updatePage(page.id, { overlayImage: { src, ...DEFAULT_OVERLAY_IMAGE } })
+      }
+      setStatus({ kind: 'success', message: '이미지 추가 완료' })
+    } catch (error) {
+      setStatus({ kind: 'error', message: error instanceof Error ? error.message : '이미지를 처리할 수 없습니다.' })
+    }
+  }
+
   return (
     <div className="studio" aria-busy={busy} onKeyDown={onToolbarKeyDown}>
       <a className="skip-link" href="#main-content">편집 영역으로 건너뛰기</a>
@@ -288,12 +413,18 @@ function Editor() {
           <button type="button" className="back-button" onClick={store.goHome}>처음으로</button>
           <input aria-label="프로젝트 이름" value={project.name} maxLength={80} onChange={(event) => store.renameProject(project.id, event.target.value)} />
         </div>
-        <div className={`save-status is-${visibleStatus.kind}`} role={visibleStatus.kind === 'error' ? 'alert' : 'status'} aria-live="polite">
-          <span className="status-indicator" aria-hidden="true" />
-          <span>{visibleStatus.message}</span>
-          {visibleStatus.recovery === 'import' && (
-            <button type="button" className="status-action" onClick={() => importInput.current?.click()}>JSON 다시 선택</button>
-          )}
+        <div className="toolbar-center">
+          <div className="history-actions" aria-label="편집 기록">
+            <button type="button" disabled={historyPast.current.length === 0} onClick={undo}>실행 취소</button>
+            <button type="button" disabled={historyFuture.current.length === 0} onClick={redo}>다시 실행</button>
+          </div>
+          <div className={`save-status is-${visibleStatus.kind}`} role={visibleStatus.kind === 'error' ? 'alert' : 'status'} aria-live="polite">
+            <span className="status-indicator" aria-hidden="true" />
+            <span>{visibleStatus.message}</span>
+            {visibleStatus.recovery === 'import' && (
+              <button type="button" className="status-action" onClick={() => importInput.current?.click()}>JSON 다시 선택</button>
+            )}
+          </div>
         </div>
         <div className="toolbar-actions" aria-label="가져오기와 내보내기">
           <input ref={importInput} hidden type="file" accept="application/json,.json" onChange={(event) => importFile(event.target.files?.[0])} />
@@ -312,9 +443,14 @@ function Editor() {
         <section className={`preview-panel mobile-panel ${panel === 'preview' ? 'shown' : ''}`} aria-labelledby="preview-heading">
           <div className="preview-title">
             <h1 id="preview-heading">카드 미리보기</h1>
-            <div><span>{index + 1} / {project.pages.length}</span><span>{formatCardSize(project.canvasSize)}</span></div>
+            <div className="preview-meta"><span>{index + 1} / {project.pages.length}</span><span>{formatCardSize(project.canvasSize)}</span></div>
+            <div className="zoom-controls" role="group" aria-label="미리보기 배율">
+              {([['fit', '맞춤'], [50, '50%'], [75, '75%'], [100, '100%']] as const).map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={zoom === value} onClick={() => setZoom(value)}>{label}</button>
+              ))}
+            </div>
           </div>
-          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
+          <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive zoom={zoom} onImageFile={uploadFromCanvas} onOverflowChange={setHasOverflow} onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
           <p className="preview-help">떠있는 이미지는 드래그하거나 방향키로 이동할 수 있습니다.</p>
         </section>
         <aside className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
@@ -323,7 +459,7 @@ function Editor() {
             <button type="button" onClick={() => store.addPage(page.templateId)}>같은 템플릿 추가</button>
           </div>
           <CanvasSizeControl key={project.id} size={project.canvasSize} onChange={(canvasSize) => store.updateProjectCanvasSize(project.id, canvasSize)} />
-          <FieldEditor page={page} onChange={(patch) => store.updatePage(page.id, patch)} onTemplateChange={(id) => store.replacePageTemplate(page.id, id)} />
+          <FieldEditor page={page} size={project.canvasSize} hasOverflow={hasOverflow} onChange={(patch) => store.updatePage(page.id, patch)} onTemplateChange={(id) => store.replacePageTemplate(page.id, id)} />
         </aside>
       </main>
 
