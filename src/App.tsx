@@ -101,14 +101,14 @@ function ProjectHome() {
               <input ref={nameInput} aria-label="프로젝트 이름" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
             </label>
             <label>
-              추천 구성
-              <select aria-label="추천 구성" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
+              구성 방식
+              <select aria-label="구성 방식" value={compositionId} onChange={(event) => setCompositionId(event.target.value)}>
                 {compositions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             </label>
             {compositionId === 'single' && (
               <label>
-                첫 템플릿
+                시작 템플릿
                 <select value={template} onChange={(event) => setTemplate(event.target.value as TemplateId)}>
                   {templateList.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
@@ -410,7 +410,7 @@ function Editor() {
             </div>
           </div>
           <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive zoom={zoom} onOverflowChange={setHasOverflow} onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
-          <p className="preview-help">배경 이미지는 편집 패널에서 추가하고, 떠있는 이미지는 드래그하거나 방향키로 이동할 수 있습니다.</p>
+          <p className="preview-help">이미지를 선택한 뒤 드래그해 이동하고 모서리 핸들로 크기를 조절할 수 있습니다.</p>
         </section>
         <aside className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
           <div className="panel-heading">

@@ -24,7 +24,6 @@ test('홈과 편집기에 자동 접근성 위반이 없다', async ({ page }) =
 
   await page.locator('.template-picker summary').click()
   await page.getByText('고급 설정', { exact: true }).click()
-  await page.getByText('떠있는 이미지', { exact: true }).click()
   const expandedEditorResults = await new AxeBuilder({ page }).analyze()
   expect(expandedEditorResults.violations).toEqual([])
 })

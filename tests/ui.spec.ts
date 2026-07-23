@@ -1,13 +1,38 @@
 import { expect, test } from '@playwright/test'
 const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHgQCAf8nL9sAAAAASUVORK5CYII=', 'base64')
 async function create(page: import('@playwright/test').Page){await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.studio')).toBeVisible()}
-const templates=[['cover-hook','강한 표지'],['midnight-quote','미드나이트 문장'],['stat-highlight','숫자 강조'],['list-insight','인사이트 목록'],['process-steps','단계 설명'],['comparison','양쪽 비교'],['quote-commentary','인용과 해설'],['image-text','사진과 글'],['divider-closing','구분·마무리']] as const
+const templates=[['cover-hook','임팩트 표지'],['midnight-quote','문장 카드'],['stat-highlight','핵심 수치'],['list-insight','핵심 인사이트'],['process-steps','단계별 가이드'],['comparison','비교 분석'],['quote-commentary','인용·해설'],['image-text','이미지 스토리'],['divider-closing','마무리 카드']] as const
 async function openTemplates(page:import('@playwright/test').Page){const details=page.locator('.template-picker');if(!(await details.evaluate((element:HTMLDetailsElement)=>element.open)))await details.locator('summary').click()}
 async function selectTemplate(page:import('@playwright/test').Page,name:string,id:string){await openTemplates(page);await page.getByRole('radio',{name,exact:true}).click();await expect(page.locator('.preview-panel .card-root').first()).toHaveAttribute('data-template',id)}
-test('프로젝트, 9개 템플릿, 빈 kicker, 500자, overlay 저장과 복제',async({page})=>{const errors:string[]=[];page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text())});await create(page);await openTemplates(page);await expect(page.locator('.template-options').getByRole('radio')).toHaveCount(9);for(const [id,name] of templates)await selectTemplate(page,name,id);await selectTemplate(page,'미드나이트 문장','midnight-quote');const kicker=page.getByRole('textbox',{name:/작은 제목/});await kicker.fill('');await expect(page.locator('.midnight .kicker').first()).toHaveText('');const body='가'.repeat(500);const bodyInput=page.getByRole('textbox',{name:/본문 \d/});await bodyInput.fill(body);await expect(page.getByText('500 / 500')).toBeVisible();await page.locator('input[type=file]').last().setInputFiles({name:'overlay.png',mimeType:'image/png',buffer:pixel});await expect(page.locator('.overlay-image').first()).toBeVisible();const overlay=page.locator('.overlay-image.interactive');await overlay.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('Shift+ArrowDown');await page.getByRole('button',{name:'복제'}).click();await expect(page.locator('.page-thumb')).toHaveCount(2);await page.reload();await expect(page.locator('.overlay-image').first()).toBeVisible();await expect(page.getByRole('textbox',{name:/본문 \d/})).toHaveValue(body);expect(errors).toEqual([])})
-test('9개 템플릿 떠있는 이미지 업로드·끝점·드래그·삭제',async({page})=>{await create(page);for(const [id,name] of templates){await selectTemplate(page,name,id);await page.locator('input[type=file]').last().setInputFiles({name:`${id}.png`,mimeType:'image/png',buffer:pixel});const overlay=page.locator('.overlay-image.interactive');await expect(overlay).toBeVisible();const imageDetails=page.locator('.image-controls');if(!(await imageDetails.evaluate((element:HTMLDetailsElement)=>element.open)))await imageDetails.locator('summary').click();await page.getByRole('slider',{name:/떠있는 이미지 너비/}).fill('100');await page.getByRole('slider',{name:/가로 위치/}).fill('100');await page.getByRole('slider',{name:/세로 위치/}).fill('0');const box=await overlay.boundingBox();if(box){await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+Math.min(box.width,20),box.y+Math.min(box.height,20));await page.mouse.up()}await page.locator('.image-controls').getByRole('button',{name:'삭제',exact:true}).click();await expect(overlay).toHaveCount(0)}})
+test('프로젝트, 9개 템플릿, 빈 kicker, 500자, overlay 저장과 복제',async({page})=>{const errors:string[]=[];page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text())});await create(page);await openTemplates(page);await expect(page.locator('.template-options').getByRole('radio')).toHaveCount(9);for(const [id,name] of templates)await selectTemplate(page,name,id);await selectTemplate(page,'문장 카드','midnight-quote');const kicker=page.getByRole('textbox',{name:/작은 제목/});await kicker.fill('');await expect(page.locator('.midnight .kicker').first()).toHaveText('');const body='가'.repeat(500);const bodyInput=page.getByRole('textbox',{name:/본문 \d/});await bodyInput.fill(body);await expect(page.getByText('500 / 500')).toBeVisible();await page.locator('.preview-image-input').setInputFiles({name:'overlay.png',mimeType:'image/png',buffer:pixel});await expect(page.locator('.overlay-image').first()).toBeVisible();const overlay=page.locator('.overlay-image.interactive');await overlay.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('Shift+ArrowDown');await page.getByRole('button',{name:'복제'}).click();await expect(page.locator('.page-thumb')).toHaveCount(2);await page.reload();await expect(page.locator('.overlay-image').first()).toBeVisible();await expect(page.getByRole('textbox',{name:/본문 \d/})).toHaveValue(body);expect(errors).toEqual([])})
+test('9개 템플릿에서 떠있는 이미지를 직접 추가·선택·이동·크기 조절·삭제한다',async({page})=>{
+  await create(page)
+  await expect(page.locator('.image-controls')).toHaveCount(0)
+  for(const [id,name] of templates){
+    await selectTemplate(page,name,id)
+    await page.locator('.preview-image-input').setInputFiles({name:`${id}.png`,mimeType:'image/png',buffer:pixel})
+    const overlay=page.locator('.overlay-image.interactive')
+    await expect(overlay).toBeVisible()
+    await expect(overlay).toHaveClass(/is-selected/)
+    await expect(page.getByRole('button',{name:'떠있는 이미지 삭제'})).toBeVisible()
+    const beforeWidth=await overlay.evaluate((element)=>parseFloat((element as HTMLElement).style.width))
+    const resize=page.getByRole('button',{name:/떠있는 이미지 크기 조절/})
+    await resize.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(()=>overlay.evaluate((element)=>parseFloat((element as HTMLElement).style.width))).toBeGreaterThan(beforeWidth)
+    const beforeLeft=await overlay.evaluate((element)=>parseFloat((element as HTMLElement).style.left))
+    await overlay.focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect.poll(()=>overlay.evaluate((element)=>parseFloat((element as HTMLElement).style.left))).toBeGreaterThan(beforeLeft)
+    await page.locator('.preview-panel .card-root').first().click({position:{x:10,y:10}})
+    await expect(page.getByRole('button',{name:'떠있는 이미지 삭제'})).toHaveCount(0)
+    await overlay.click()
+    await page.getByRole('button',{name:'떠있는 이미지 삭제'}).click()
+    await expect(overlay).toHaveCount(0)
+  }
+})
 
-test('인사이트 7장 추천 구성이 새 정보 템플릿을 포함한다',async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByLabel('추천 구성').selectOption('insight-story');await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.page-thumb')).toHaveCount(7);for(const id of ['stat-highlight','process-steps','comparison'])await expect(page.locator(`.page-thumb [data-template="${id}"]`)).toHaveCount(1)})
+test('7장 인사이트 스토리 구성이 새 정보 템플릿을 포함한다',async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByLabel('구성 방식').selectOption('insight-story');await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.page-thumb')).toHaveCount(7);for(const id of ['stat-highlight','process-steps','comparison'])await expect(page.locator(`.page-thumb [data-template="${id}"]`)).toHaveCount(1)})
 test('추천 한글 9종과 영문 4종, 실행 취소와 다시 실행, 캔버스 배율이 동작한다',async({page})=>{
   await create(page)
   const koreanFonts=page.locator('[data-font-group="korean"]')
@@ -64,10 +89,10 @@ test('배경, 템플릿 사진, 떠있는 이미지가 서로 구분되어 동�
   await page.reload()
   await expect(page.locator('.preview-panel .card-background img').first()).toBeVisible()
 
-  await page.locator('.image-controls input[type=file]').setInputFiles({name:'floating.png',mimeType:'image/png',buffer:pixel})
+  await page.locator('.preview-image-input').setInputFiles({name:'floating.png',mimeType:'image/png',buffer:pixel})
   await expect(page.locator('.preview-panel .overlay-image.interactive')).toBeVisible()
 
-  await selectTemplate(page,'사진과 글','image-text')
+  await selectTemplate(page,'이미지 스토리','image-text')
   await page.locator('.template-image-field input[type=file]').setInputFiles({name:'content.png',mimeType:'image/png',buffer:pixel})
   await expect(page.locator('.preview-panel .hero-image img').first()).toBeVisible()
 })

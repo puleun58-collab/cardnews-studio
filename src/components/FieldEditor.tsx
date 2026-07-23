@@ -1,6 +1,5 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { englishFontFamilies, englishFontIds, getCardFontFamily, koreanFontIds, normalizeDesign } from '../brand/midnightDesign'
-import { DEFAULT_OVERLAY_IMAGE } from '../engine/overlayImage'
 import { imageFileToDataUrl } from '../engine/imageTools'
 import { templateList, templateRegistry } from '../registry/templateRegistry'
 import type { CardPage, CardSize, EnglishFontId, KoreanFontId, TemplateId, TemplateManifest } from '../types'
@@ -57,18 +56,16 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
   const manifest = templateRegistry[page.templateId]
   const primaryImageInput = useRef<HTMLInputElement>(null)
   const contentImageInput = useRef<HTMLInputElement>(null)
-  const overlayInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
   const activeImage = page.backgroundImage
   const updateContent = (key: string, value: string | string[]) => onChange({ content: { ...page.content, [key]: value } })
-  const upload = async (file: File | undefined, overlay: boolean) => {
+  const uploadContentImage = async (file?: File) => {
     if (!file) return
     try {
       setError('')
       const src = await imageFileToDataUrl(file)
-      if (overlay) onChange({ overlayImage: { src, ...DEFAULT_OVERLAY_IMAGE } })
-      else onChange({ image: src })
+      onChange({ image: src })
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : '이미지 처리 실패')
     }
@@ -163,7 +160,7 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
             return (
               <div className="field-group template-image-field" key={field.key}>
                 <span>템플릿 사진 영역</span>
-                <input ref={contentImageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload(event.target.files?.[0], false)} />
+                <input ref={contentImageInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadContentImage(event.target.files?.[0])} />
                 <div className="button-row">
                   <button type="button" onClick={() => contentImageInput.current?.click()}>{page.image ? '사진 교체' : '사진 추가'}</button>
                   {page.image && <button type="button" className="subtle" onClick={() => onChange({ image: null })}>삭제</button>}
@@ -294,25 +291,6 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
         </section>
       )}
 
-      <details className="control-disclosure image-controls">
-        <summary>떠있는 이미지</summary>
-        <div className="advanced-controls">
-          <input ref={overlayInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload(event.target.files?.[0], true)} />
-          <div className="button-row">
-            <button type="button" onClick={() => overlayInput.current?.click()}>{page.overlayImage ? '이미지 교체' : '이미지 추가'}</button>
-            {page.overlayImage && <button type="button" className="danger" onClick={() => onChange({ overlayImage: null })}>삭제</button>}
-          </div>
-          {page.overlayImage && (
-            <>
-              <img className="overlay-thumb" src={page.overlayImage.src} alt="추가한 이미지 미리보기" />
-              <label>너비 <output>{page.overlayImage.width}%</output><input aria-label={`떠있는 이미지 너비 ${page.overlayImage.width}%`} type="range" min="12" max="100" value={page.overlayImage.width} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, width: Number(event.target.value) } })} /></label>
-              <label>가로 위치 <output>{page.overlayImage.x}%</output><input aria-label={`가로 위치 ${page.overlayImage.x}%`} type="range" min="0" max="100" value={page.overlayImage.x} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, x: Number(event.target.value) } })} /></label>
-              <label>세로 위치 <output>{page.overlayImage.y}%</output><input aria-label={`세로 위치 ${page.overlayImage.y}%`} type="range" min="0" max="100" value={page.overlayImage.y} onChange={(event) => onChange({ overlayImage: { ...page.overlayImage!, y: Number(event.target.value) } })} /></label>
-              <button type="button" className="subtle" onClick={() => onChange({ overlayImage: { ...page.overlayImage!, ...DEFAULT_OVERLAY_IMAGE } })}>크기와 위치 초기화</button>
-            </>
-          )}
-        </div>
-      </details>
       {error && <p className="error" role="alert">{error} 이미지 파일을 다시 선택해 주세요.</p>}
     </div>
   )
