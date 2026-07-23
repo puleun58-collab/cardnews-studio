@@ -1,7 +1,7 @@
 import type { CardSize, CardSizePreset } from '../types'
 
 export const cardSizePresets: Record<Exclude<CardSizePreset, 'custom'>, CardSize & { label: string }> = {
-  portrait: { width: 1080, height: 1350, label: '인스타그램 세로' },
+  portrait: { width: 1080, height: 1350, label: '인스타그램' },
   square: { width: 1080, height: 1080, label: '정사각형' },
   story: { width: 1080, height: 1920, label: '스토리' },
 }
