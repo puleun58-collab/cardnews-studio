@@ -8,7 +8,7 @@ test('새 프로젝트 소개 문구가 의도한 두 줄로 표시된다',async
   await page.goto('/')
   const lines=page.locator('.new-project-intro p span')
   await expect(lines).toHaveCount(2)
-  await expect(lines.nth(0)).toHaveText('단일 카드부터 7장 인사이트 스토리까지,')
+  await expect(lines.nth(0)).toHaveText('단일 카드부터 9장 인사이트 스토리까지,')
   await expect(lines.nth(1)).toHaveText('필요한 구성으로 바로 시작할 수 있습니다.')
 })
 test('캔버스 크기 설정은 중복 라벨 없이 편집 패널 타이포그래피를 사용한다',async({page})=>{
@@ -56,7 +56,7 @@ test('9개 템플릿에서 떠있는 이미지를 직접 추가·선택·이동�
   }
 })
 
-test('7장 인사이트 스토리 구성이 새 정보 템플릿을 포함한다',async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByLabel('구성 방식').selectOption('insight-story');await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.page-thumb')).toHaveCount(7);for(const id of ['stat-highlight','process-steps','comparison'])await expect(page.locator(`.page-thumb [data-template="${id}"]`)).toHaveCount(1)})
+test('9장 인사이트 스토리 구성이 모든 신규 템플릿을 포함한다',async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByLabel('구성 방식').selectOption('insight-story');await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.page-thumb')).toHaveCount(9);for(const [id] of templates)await expect(page.locator(`.page-thumb [data-template="${id}"]`)).toHaveCount(1)})
 test('그라데이션 범위와 강도가 배경색과 배경 이미지에 저장·적용된다',async({page})=>{
   await create(page)
   const gradientToggle=page.getByRole('checkbox',{name:'그라데이션 사용'})
