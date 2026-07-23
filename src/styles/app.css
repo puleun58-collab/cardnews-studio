@@ -306,6 +306,7 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 .field-group > span, .control-section h3 { margin: 0; color: var(--ui-text); font-size: 14px; font-weight: 750; }
 .control-section h3 { margin-bottom: 2px; }
 .canvas-size-control { margin-bottom: 17px; }
+.canvas-size-control > select { font-size: 14px; font-weight: 500; letter-spacing: -.01em; }
 .canvas-size-control > .muted { margin: 0; color: var(--ui-text-muted); font-size: 12px; }
 .dimension-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .home-dimensions { grid-column: 1 / -1; }

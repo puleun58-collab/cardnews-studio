@@ -11,6 +11,13 @@ test('새 프로젝트 소개 문구가 의도한 두 줄로 표시된다',async
   await expect(lines.nth(0)).toHaveText('단일 카드부터 7장 인사이트 스토리까지,')
   await expect(lines.nth(1)).toHaveText('필요한 구성으로 바로 시작할 수 있습니다.')
 })
+test('캔버스 크기 설정은 중복 라벨 없이 편집 패널 타이포그래피를 사용한다',async({page})=>{
+  await create(page)
+  await expect(page.getByText('출력 규격',{exact:true})).toHaveCount(0)
+  const sizeSelect=page.getByRole('combobox',{name:'캔버스 크기'})
+  await expect(sizeSelect).toHaveCSS('font-size','14px')
+  await expect(sizeSelect).toHaveCSS('font-weight','500')
+})
 test('프로젝트, 9개 템플릿, 빈 kicker, 500자, overlay 저장과 복제',async({page})=>{const errors:string[]=[];page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text())});await create(page);await openTemplates(page);await expect(page.locator('.template-options').getByRole('radio')).toHaveCount(9);for(const [id,name] of templates)await selectTemplate(page,name,id);await selectTemplate(page,'문장 카드','midnight-quote');const kicker=page.getByRole('textbox',{name:/작은 제목/});await kicker.fill('');await expect(page.locator('.midnight .kicker').first()).toHaveText('');const body='가'.repeat(500);const bodyInput=page.getByRole('textbox',{name:/본문 \d/});await bodyInput.fill(body);await expect(page.getByText('500 / 500')).toBeVisible();await page.locator('.preview-image-input').setInputFiles({name:'overlay.png',mimeType:'image/png',buffer:pixel});await expect(page.locator('.overlay-image').first()).toBeVisible();const overlay=page.locator('.overlay-image.interactive');await overlay.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('Shift+ArrowDown');await page.getByRole('button',{name:'복제'}).click();await expect(page.locator('.page-thumb')).toHaveCount(2);await page.reload();await expect(page.locator('.overlay-image').first()).toBeVisible();await expect(page.getByRole('textbox',{name:/본문 \d/})).toHaveValue(body);expect(errors).toEqual([])})
 test('9개 템플릿에서 떠있는 이미지를 직접 추가·선택·이동·크기 조절·삭제한다',async({page})=>{
   await create(page)

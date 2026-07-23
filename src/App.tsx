@@ -33,13 +33,10 @@ function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size
   return (
     <section className="control-section canvas-size-control" aria-labelledby="canvas-size-title">
       <h3 id="canvas-size-title">캔버스 크기</h3>
-      <label>
-        출력 규격
-        <select aria-label="캔버스 크기" value={mode} onChange={(event) => selectMode(event.target.value as CardSizePreset)}>
-          {Object.entries(cardSizePresets).map(([value, preset]) => <option key={value} value={value}>{preset.label} · {formatCardSize(preset)}</option>)}
-          <option value="custom">사용자 지정</option>
-        </select>
-      </label>
+      <select aria-label="캔버스 크기" value={mode} onChange={(event) => selectMode(event.target.value as CardSizePreset)}>
+        {Object.entries(cardSizePresets).map(([value, preset]) => <option key={value} value={value}>{preset.label} · {formatCardSize(preset)}</option>)}
+        <option value="custom">사용자 지정</option>
+      </select>
       {mode === 'custom' && (
         <div className="dimension-grid">
           <label>너비<input aria-label="사용자 지정 너비" type="number" min="320" max="4096" step="1" value={size.width} onChange={(event) => updateDimension('width', event.target.value)} /></label>
