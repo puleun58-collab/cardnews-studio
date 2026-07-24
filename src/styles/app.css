@@ -431,7 +431,7 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   .project-card { grid-template-columns: 1fr; gap: 24px; padding: 30px 0; }
   .project-preview { width: 240px; height: 300px; }
   .project-scale { transform: translateX(-50%) scale(.223); }
-  .project-card-body { width: min(240px, 100%); margin-inline: auto; padding: 0; }
+  .project-card-body { width: calc(100% - 24px); margin-inline: 12px; padding: 0; }
   .project-card-body > input { width: 100%; }
   .empty { grid-template-columns: auto 1fr; padding: 28px 0; }
   .empty button { grid-column: 1 / -1; width: 100%; }
@@ -483,7 +483,6 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   .section-title h2 { font-size: 22px; }
   .project-preview { width: 220px; height: 275px; }
   .project-scale { transform: translateX(-50%) scale(.204); }
-  .project-card-body { width: min(220px, 100%); }
   .toolbar-main button { padding-inline: 10px; }
   .toolbar-actions button { font-size: 11px; }
   .dimension-grid { grid-template-columns: 1fr; }

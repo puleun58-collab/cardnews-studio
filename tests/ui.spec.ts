@@ -140,7 +140,7 @@ test('배경, 템플릿 사진, 떠있는 이미지가 서로 구분되어 동�
 })
 for(const viewport of [{width:360,height:800},{width:390,height:844},{width:768,height:1024},{width:1440,height:900}])test(`반응형 ${viewport.width}x${viewport.height}`,async({page})=>{await page.setViewportSize(viewport);await create(page);if(viewport.width<=860){await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeVisible();for(const name of ['페이지','미리보기','편집'])await page.getByRole('button',{name,exact:true}).last().click()}else await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeHidden();const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);expect(overflow).toBe(0);await page.reload();await expect(page.locator('.preview-title').getByText('1080 × 1350',{exact:true})).toBeVisible()})
 
-test('mobile feed cards fit their cells and project details align with the preview', async ({ page }) => {
+test('mobile feed cards fit their cells and project details keep a modest left inset', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await create(page)
   await page.locator('.toolbar-actions button').nth(2).click()
@@ -165,14 +165,14 @@ test('mobile feed cards fit their cells and project details align with the previ
   await page.locator('.back-button').click()
 
   const projectLayout = await page.evaluate(() => {
-    const preview = document.querySelector<HTMLElement>('.project-preview')!.getBoundingClientRect()
+    const card = document.querySelector<HTMLElement>('.project-card')!.getBoundingClientRect()
     const details = document.querySelector<HTMLElement>('.project-card-body')!.getBoundingClientRect()
     return {
-      centerOffset: Math.abs(preview.left + preview.width / 2 - details.left - details.width / 2),
-      viewportCenterOffset: Math.abs(details.left + details.width / 2 - window.innerWidth / 2),
+      leftInset: details.left - card.left,
+      rightInset: card.right - details.right,
     }
   })
 
-  expect(projectLayout.centerOffset).toBeLessThanOrEqual(1)
-  expect(projectLayout.viewportCenterOffset).toBeLessThanOrEqual(1)
+  expect(projectLayout.leftInset).toBeCloseTo(12, 0)
+  expect(projectLayout.rightInset).toBeCloseTo(12, 0)
 })
