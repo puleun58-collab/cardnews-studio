@@ -214,7 +214,21 @@ function Feed({ project, onClose }: { project: Project; onClose: () => void }) {
         </header>
         {mode === 'grid' ? (
           <div className="feed-grid" aria-label="전체 카드 격자">
-            {project.pages.map((page, pageIndex) => {const scale=300/project.canvasSize.width;return <div className="feed-card" style={{aspectRatio:`${project.canvasSize.width} / ${project.canvasSize.height}`}} key={page.id}><div style={{width:project.canvasSize.width,height:project.canvasSize.height,transform:`scale(${scale})`}}><CardRenderer page={page} pageIndex={pageIndex} pageCount={project.pages.length} size={project.canvasSize} /></div></div>})}
+            {project.pages.map((page, pageIndex) => (
+              <div
+                className="feed-card"
+                style={{ aspectRatio: `${project.canvasSize.width} / ${project.canvasSize.height}` }}
+                key={page.id}
+              >
+                <PreviewPane
+                  page={page}
+                  pageIndex={pageIndex}
+                  pageCount={project.pages.length}
+                  size={project.canvasSize}
+                  label={`카드 ${pageIndex + 1} 미리보기`}
+                />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="post-view">
