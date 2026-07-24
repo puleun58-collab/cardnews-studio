@@ -91,7 +91,7 @@ function ProjectHome() {
             <span className="section-label">새 작업</span>
             <h2 id="new-project-title">새 이야기를 시작하세요</h2>
             <p>
-              <span>단일 카드부터 9장 인사이트 스토리까지,</span>
+              <span>단일 카드부터 9장의 인사이트 스토리까지,</span>
               <span>필요한 구성으로 바로 시작할 수 있습니다.</span>
             </p>
           </div>
