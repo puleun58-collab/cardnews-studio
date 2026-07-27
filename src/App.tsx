@@ -45,10 +45,18 @@ function StorageManagement() {
   return (
     <details className="storage-management">
       <summary>브라우저 저장소 관리</summary>
-      <p>프로젝트와 이미지는 이 브라우저의 IndexedDB에 저장됩니다. 초기화 전에는 전체 JSON 백업을 권장합니다.</p>
-      <div className="button-row">
-        <button type="button" onClick={backup}>전체 JSON 백업</button>
-        <button type="button" onClick={lightweightBackup}>경량 JSON 백업</button>
+      <p>프로젝트와 이미지는 이 브라우저에만 저장됩니다. 필요한 복구 범위에 맞춰 백업 형식을 선택하세요.</p>
+      <div className="storage-backup-options" aria-label="JSON 백업 형식">
+        <button type="button" className="backup-option is-recommended" onClick={backup}>
+          <span className="backup-option-heading">이미지 포함 전체 백업 <small>권장</small></span>
+          <span>프로젝트, 디자인, 모든 이미지를 함께 저장합니다. 다른 브라우저에서도 완전히 복구할 수 있습니다.</span>
+        </button>
+        <button type="button" className="backup-option" onClick={lightweightBackup}>
+          <span className="backup-option-heading">이미지 제외 경량 백업</span>
+          <span>텍스트와 디자인만 저장합니다. 파일은 작지만 업로드한 이미지는 복구되지 않습니다.</span>
+        </button>
+      </div>
+      <div className="button-row storage-maintenance-actions">
         <button type="button" onClick={() => void cleanup()}>이미지 정리</button>
         <button type="button" className="danger" onClick={() => void clear()}>저장소 초기화</button>
       </div>
@@ -466,7 +474,7 @@ function Editor() {
           <button type="button" className="primary" disabled={busy} onClick={() => run('ZIP', () => exportZip(stage.current!, project, (message) => setStatus({ kind: 'loading', message })))}>ZIP</button>
         </div>
       </header>
-      <StorageStatusPanel />
+      <StorageStatusPanel showMigrationNotice={false} />
 
       <main className="workspace" id="main-content">
         <div className={`mobile-panel ${panel === 'pages' ? 'shown' : ''}`}>

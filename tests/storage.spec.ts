@@ -49,7 +49,13 @@ test('기존 localStorage를 원본 보존 상태로 IndexedDB와 Blob 저장소
   await page.goto('/')
   await expect(page.locator('.studio')).toBeVisible()
   await expect(page.getByRole('textbox', { name: /본문 \d/ })).toHaveValue('자동 이전된 본문')
+  await expect(page.locator('.storage-warning')).toHaveCount(0)
+  await page.getByRole('button', { name: '처음으로' }).click()
   await expect(page.locator('.storage-warning')).toContainText('안전하게 이전')
+  await expect(page.getByRole('button', { name: '이미지 포함 백업' })).toBeVisible()
+  await page.getByText('브라우저 저장소 관리').click()
+  await expect(page.getByRole('button', { name: /이미지 포함 전체 백업/ })).toContainText('완전히 복구')
+  await expect(page.getByRole('button', { name: /이미지 제외 경량 백업/ })).toContainText('이미지는 복구되지 않습니다')
 
   const stored = await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {

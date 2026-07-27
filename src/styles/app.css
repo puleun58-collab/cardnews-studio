@@ -273,16 +273,54 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   color: #f0dfbe;
 }
 .home > .storage-warning { margin: 0 0 34px; }
+.home > .storage-warning:not(.is-error) {
+  border-color: #cdbd9f;
+  border-left: 3px solid var(--ui-accent);
+  background: #eee8dd;
+  color: #332a1e;
+}
 .studio > .storage-warning { z-index: 25; flex: 0 0 auto; border-width: 0 0 1px; }
 .storage-warning.is-error { border-color: #8f4c4c; background: #251717; color: #f2c7c7; }
 .storage-warning strong { display: block; margin-bottom: 3px; font-size: 13px; }
 .storage-warning p { margin: 0; font-size: 12px; line-height: 1.45; }
 .storage-warning small { display: block; margin-top: 4px; color: inherit; opacity: .76; }
 .storage-warning-actions { display: flex; flex: 0 0 auto; gap: 8px; }
-.storage-warning-actions button { min-height: 34px; padding: 6px 10px; font-size: 11px; }
-.storage-management { margin-top: 56px; border-block: 1px solid var(--ui-border); padding: 18px 0; }
-.storage-management summary { cursor: pointer; font-weight: 700; }
-.storage-management > p { max-width: 760px; color: var(--ui-text-muted); font-size: 13px; line-height: 1.6; }
+.storage-warning-actions button {
+  min-height: 34px;
+  border-color: rgb(240 223 190 / 42%);
+  background: rgb(240 223 190 / 7%);
+  padding: 6px 10px;
+  color: inherit;
+  font-size: 11px;
+}
+.storage-warning-actions .storage-backup-action { border-color: #f0dfbe; background: #f0dfbe; color: #211d16; }
+.storage-warning-actions .storage-backup-action:hover:not(:disabled) { border-color: #fff4df; background: #fff4df; color: #211d16; }
+.home > .storage-warning:not(.is-error) .storage-warning-actions button { border-color: #aa9473; background: transparent; color: #332a1e; }
+.home > .storage-warning:not(.is-error) .storage-warning-actions button:hover:not(:disabled) { border-color: #7d4a1b; background: #e2d8c7; color: #211d16; }
+.home > .storage-warning:not(.is-error) .storage-warning-actions .storage-backup-action { border-color: var(--ui-accent); background: var(--ui-accent); color: #ffffff; }
+.home > .storage-warning:not(.is-error) .storage-warning-actions .storage-backup-action:hover:not(:disabled) { border-color: #643711; background: #643711; color: #ffffff; }
+.storage-management { margin-top: 56px; border-block: 1px solid var(--ui-border); padding: 20px 0 24px; }
+.storage-management summary { cursor: pointer; font-size: 15px; font-weight: 700; }
+.storage-management > p { max-width: 760px; margin: 10px 0 18px; color: var(--ui-text-muted); font-size: 13px; line-height: 1.6; }
+.storage-backup-options { width: min(860px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.backup-option {
+  min-height: 124px;
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  border-color: var(--ui-border);
+  background: #ffffff;
+  padding: 18px 20px;
+  text-align: left;
+  white-space: normal;
+}
+.backup-option:hover:not(:disabled) { border-color: var(--ui-border-strong); background: #f0f0ec; }
+.backup-option.is-recommended { border-left: 3px solid var(--ui-accent); }
+.backup-option-heading { color: var(--ui-text); font-size: 14px; font-weight: 750; }
+.backup-option-heading small { margin-left: 6px; color: var(--ui-accent); font-size: 10px; font-weight: 750; }
+.backup-option > span:last-child { color: var(--ui-text-muted); font-size: 12px; font-weight: 500; line-height: 1.55; }
+.storage-maintenance-actions { margin-top: 14px; }
+.storage-maintenance-actions button { min-height: 38px; padding-block: 7px; font-size: 12px; }
 
 .workspace { display: grid; grid-template-columns: 232px minmax(360px, 1fr) 360px; min-height: 0; flex: 1; }
 .workspace > .mobile-panel { min-width: 0; min-height: 0; }
@@ -479,6 +517,8 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   .storage-warning { align-items: flex-start; flex-direction: column; gap: 10px; padding: 12px; }
   .storage-warning-actions { width: 100%; flex-wrap: wrap; }
   .storage-warning-actions button { flex: 1 1 130px; }
+  .storage-backup-options { grid-template-columns: 1fr; }
+  .backup-option { min-height: 112px; }
   .workspace { display: block; min-height: 0; }
   .mobile-panel { display: none !important; width: 100%; height: 100%; }
   .mobile-panel.shown { display: flex !important; }
