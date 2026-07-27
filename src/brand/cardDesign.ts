@@ -45,6 +45,9 @@ export const defaultDesign: CardDesignSettings = {
   fontId: 'pretendard',
   englishFontId: 'manrope',
   fontSize: 62,
+  secondaryFontSize: 30,
+  spacing: 24,
+  layoutRatio: 50,
   letterSpacing: 0,
   lineHeight: 1.55,
   textAlign: 'center',
@@ -54,28 +57,34 @@ export const defaultDesign: CardDesignSettings = {
 }
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min))
 const color = (value: unknown, fallback: string) => typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value) ? value.toUpperCase() : fallback
-export function normalizeDesign(value?: Partial<CardDesignSettings>): CardDesignSettings {
+export function normalizeDesign(value?: Partial<CardDesignSettings>, fallback: CardDesignSettings = defaultDesign): CardDesignSettings {
   const storedFontId = String(value?.fontId ?? '')
   const fontId = koreanFontIds.includes(storedFontId as KoreanFontId)
     ? storedFontId as KoreanFontId
-    : legacyKoreanFonts[storedFontId] ?? defaultDesign.fontId
+    : legacyKoreanFonts[storedFontId] ?? fallback.fontId
   const englishFontId = englishFontIds.includes(value?.englishFontId as EnglishFontId)
     ? value!.englishFontId!
-    : legacyEnglishFonts[storedFontId] ?? defaultDesign.englishFontId
+    : legacyEnglishFonts[storedFontId] ?? fallback.englishFontId
   return {
-    backgroundColor: color(value?.backgroundColor, defaultDesign.backgroundColor),
-    textColor: color(value?.textColor, defaultDesign.textColor),
-    gradientEnabled: value?.gradientEnabled === true,
-    gradientRange: clamp(Number(value?.gradientRange ?? defaultDesign.gradientRange), 0, 100),
-    gradientStrength: clamp(Number(value?.gradientStrength ?? defaultDesign.gradientStrength), 0, 100),
+    backgroundColor: color(value?.backgroundColor, fallback.backgroundColor),
+    textColor: color(value?.textColor, fallback.textColor),
+    gradientEnabled: value?.gradientEnabled ?? fallback.gradientEnabled,
+    gradientRange: clamp(Number(value?.gradientRange ?? fallback.gradientRange), 0, 100),
+    gradientStrength: clamp(Number(value?.gradientStrength ?? fallback.gradientStrength), 0, 100),
     fontId,
     englishFontId,
-    fontSize: clamp(Number(value?.fontSize ?? defaultDesign.fontSize), 40, 84),
-    letterSpacing: clamp(Number(value?.letterSpacing ?? defaultDesign.letterSpacing), -6, 8),
-    lineHeight: clamp(Number(value?.lineHeight ?? defaultDesign.lineHeight), 1.2, 2),
-    textAlign: ['left', 'center', 'right'].includes(value?.textAlign ?? '') ? value!.textAlign! : defaultDesign.textAlign,
-    verticalAlign: ['top', 'center', 'bottom'].includes(value?.verticalAlign ?? '') ? value!.verticalAlign! : defaultDesign.verticalAlign,
-    contentWidth: clamp(Number(value?.contentWidth ?? defaultDesign.contentWidth), 60, 100),
-    showPageNumber: value?.showPageNumber !== false,
+    fontSize: clamp(Number(value?.fontSize ?? fallback.fontSize), 20, 280),
+    secondaryFontSize: clamp(Number(value?.secondaryFontSize ?? fallback.secondaryFontSize), 14, 100),
+    spacing: clamp(Number(value?.spacing ?? fallback.spacing), 0, 200),
+    layoutRatio: clamp(Number(value?.layoutRatio ?? fallback.layoutRatio), 25, 75),
+    letterSpacing: clamp(Number(value?.letterSpacing ?? fallback.letterSpacing), -6, 8),
+    lineHeight: clamp(Number(value?.lineHeight ?? fallback.lineHeight), 1.1, 2),
+    textAlign: ['left', 'center', 'right'].includes(value?.textAlign ?? '') ? value!.textAlign! : fallback.textAlign,
+    verticalAlign: ['top', 'center', 'bottom'].includes(value?.verticalAlign ?? '') ? value!.verticalAlign! : fallback.verticalAlign,
+    contentWidth: clamp(Number(value?.contentWidth ?? fallback.contentWidth), 50, 100),
+    showPageNumber: value?.showPageNumber ?? fallback.showPageNumber,
   }
 }
+
+export const createDesign = (overrides: Partial<CardDesignSettings> = {}) =>
+  normalizeDesign(overrides, defaultDesign)

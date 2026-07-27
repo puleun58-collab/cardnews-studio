@@ -63,7 +63,7 @@ test('reduced-motion과 dialog 키보드 포커스 흐름을 존중한다', asyn
   await expect(feedButton).toBeFocused()
 })
 
-test('home visual foundation stays white and loads the display font', async ({ page }) => {
+test('home visual foundation stays warm white and loads the display font', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await reset(page)
   await page.waitForFunction(() => document.fonts.check('500 46px "Noto Serif KR Variable"'))
@@ -79,7 +79,7 @@ test('home visual foundation stays white and loads the display font', async ({ p
     }
   })
 
-  expect(result.background).toBe('rgb(255, 255, 255)')
+  expect(result.background).toBe('rgb(245, 245, 242)')
   expect(result.headingFont).toContain('Noto Serif KR Variable')
   expect(result.overflow).toBe(0)
   await expect(page.getByRole('heading', { level: 1, name: 'CARDNEWS STUDIO' })).toBeVisible()
@@ -88,6 +88,6 @@ test('home visual foundation stays white and loads the display font', async ({ p
   await expect.poll(() => page.locator('.brand-mark').evaluate((node) => ({
     stroke: getComputedStyle(node, '::before').borderTopWidth,
     opening: getComputedStyle(node, '::after').height,
-  }))).toEqual({ stroke: '4px', opening: '14px' })
+  }))).toEqual({ stroke: '5px', opening: '14px' })
   await expect(page.locator('.new-project-intro p span')).toHaveCount(2)
 })

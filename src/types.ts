@@ -25,6 +25,9 @@ export interface CardDesignSettings {
   fontId: KoreanFontId
   englishFontId: EnglishFontId
   fontSize: number
+  secondaryFontSize: number
+  spacing: number
+  layoutRatio: number
   letterSpacing: number
   lineHeight: number
   textAlign: 'left' | 'center' | 'right'
@@ -45,7 +48,16 @@ export interface CardPage {
 }
 export interface Project { schemaVersion: number; id: string; name: string; createdAt: string; updatedAt: string; canvasSize: CardSize; pages: CardPage[] }
 export interface FieldDef { key: string; label: string; type: 'text' | 'textarea' | 'list' | 'image'; placeholder?: string; maxLength?: number; required?: boolean }
-export type DesignCapability = 'backgroundColor' | 'textColor' | 'gradient' | 'fontId' | 'fontSize' | 'letterSpacing' | 'lineHeight' | 'textAlign' | 'verticalAlign' | 'contentWidth' | 'showPageNumber'
+export type DesignCapability = 'backgroundColor' | 'textColor' | 'gradient' | 'fontId' | 'letterSpacing' | 'lineHeight' | 'textAlign' | 'verticalAlign' | 'contentWidth' | 'showPageNumber'
+export type LayoutSettingKey = 'fontSize' | 'secondaryFontSize' | 'spacing' | 'layoutRatio'
+export interface LayoutControl {
+  key: LayoutSettingKey
+  label: string
+  min: number
+  max: number
+  step: number
+  unit: 'px' | '%'
+}
 export interface CardProps { page: CardPage; pageIndex: number; pageCount: number; forExport?: boolean; reportOverflow?: boolean }
 export interface TemplateManifest {
   id: TemplateId
@@ -59,4 +71,5 @@ export interface TemplateManifest {
   component: ComponentType<CardProps>
   defaultDesign?: CardDesignSettings
   capabilities?: DesignCapability[]
+  layoutControls?: LayoutControl[]
 }

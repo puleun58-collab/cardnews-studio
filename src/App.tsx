@@ -13,6 +13,7 @@ import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize }
 import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
 import './styles/app.css'
 import './styles/card.css'
+import './styles/design.css'
 import './styles/fonts.css'
 
 type Panel = 'pages' | 'preview' | 'edit'

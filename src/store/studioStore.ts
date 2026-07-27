@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { appConfig } from '../config/appConfig'
-import { normalizeDesign } from '../brand/midnightDesign'
+import { normalizeDesign } from '../brand/cardDesign'
 import { normalizeOverlayImage } from '../engine/overlayImage'
 import { defaultCardSize, normalizeCardSize } from '../brand/cardSize'
 import { templateRegistry } from '../registry/templateRegistry'
@@ -10,7 +10,7 @@ const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
 export function createPage(templateId: TemplateId = 'midnight-quote'): CardPage {
   const manifest = templateRegistry[templateId]
-  return { id: uid(), templateId, variantId: manifest.defaultVariant, content: structuredClone(manifest.sampleContent.content), backgroundImage: null, image: manifest.sampleContent.image ?? null, overlayImage: null, design: manifest.defaultDesign ? normalizeDesign(manifest.defaultDesign) : undefined }
+  return { id: uid(), templateId, variantId: manifest.defaultVariant, content: structuredClone(manifest.sampleContent.content), backgroundImage: null, image: manifest.sampleContent.image ?? null, overlayImage: null, design: manifest.defaultDesign ? normalizeDesign(manifest.defaultDesign, manifest.defaultDesign) : undefined }
 }
 function normalizePage(raw: unknown): CardPage {
   if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 페이지입니다.')
@@ -23,7 +23,7 @@ function normalizePage(raw: unknown): CardPage {
     const rawValue = p.content?.[field.key]
     content[field.key] = field.type === 'list' ? (Array.isArray(rawValue) ? rawValue.slice(0, 5).map(String) : []) : String(rawValue ?? '').slice(0, field.maxLength)
   }
-  return { id: typeof p.id === 'string' ? p.id : uid(), templateId:p.templateId, variantId:typeof p.variantId === 'string' ? p.variantId : manifest.defaultVariant, content, backgroundImage:typeof p.backgroundImage === 'string' ? p.backgroundImage : null, image:typeof p.image === 'string' ? p.image : null, overlayImage:normalizeOverlayImage(p.overlayImage), design:p.templateId === 'midnight-quote' ? normalizeDesign(p.design) : undefined }
+  return { id: typeof p.id === 'string' ? p.id : uid(), templateId:p.templateId, variantId:typeof p.variantId === 'string' ? p.variantId : manifest.defaultVariant, content, backgroundImage:typeof p.backgroundImage === 'string' ? p.backgroundImage : null, image:typeof p.image === 'string' ? p.image : null, overlayImage:normalizeOverlayImage(p.overlayImage), design:normalizeDesign(p.design, manifest.defaultDesign) }
 }
 function normalizeProject(raw: unknown): Project {
   if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 프로젝트 파일입니다.')
@@ -67,7 +67,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   duplicatePage(id){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length>=appConfig.maxPages)return p; const source=p.pages.find(x=>x.id===id); if(!source)return p; const copy={...structuredClone(source),id:uid()}; queueMicrotask(()=>set({activePageId:copy.id})); const at=p.pages.findIndex(x=>x.id===id)+1; const pages=[...p.pages]; pages.splice(at,0,copy); return {...p,pages,updatedAt:now()}})}))},
   deletePage(id){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length===1)return p; const pages=p.pages.filter(x=>x.id!==id); if(s.activePageId===id)queueMicrotask(()=>set({activePageId:pages[0].id})); return {...p,pages,updatedAt:now()}})}))},
   reorderPages(oldIndex,newIndex){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId)return p; const pages=[...p.pages]; const [item]=pages.splice(oldIndex,1); pages.splice(newIndex,0,item); return {...p,pages,updatedAt:now()}})}))},
-  updatePage(id,patch){set(s=>({projects:s.projects.map(p=>p.id!==s.activeProjectId?p:{...p,updatedAt:now(),pages:p.pages.map(page=>page.id===id?{...page,...patch,design:patch.design?normalizeDesign(patch.design):page.design,overlayImage:patch.overlayImage===undefined?page.overlayImage:normalizeOverlayImage(patch.overlayImage)}:page)})}))},
+  updatePage(id,patch){set(s=>({projects:s.projects.map(p=>p.id!==s.activeProjectId?p:{...p,updatedAt:now(),pages:p.pages.map(page=>page.id===id?{...page,...patch,design:patch.design?normalizeDesign(patch.design,templateRegistry[page.templateId].defaultDesign):page.design,overlayImage:patch.overlayImage===undefined?page.overlayImage:normalizeOverlayImage(patch.overlayImage)}:page)})}))},
   replacePageTemplate(id,templateId){const replacement=createPage(templateId); get().updatePage(id,{...replacement,id})},
   restoreActiveProject(project,activePageId){set(s=>{if(project.id!==s.activeProjectId)return s;const restored=structuredClone(project);const nextPageId=activePageId&&restored.pages.some(page=>page.id===activePageId)?activePageId:restored.pages[0]?.id??null;return {projects:s.projects.map(item=>item.id===restored.id?restored:item),activePageId:nextPageId}})},
   importProject(text){if(new Blob([text]).size>appConfig.maxJsonBytes)throw new Error('JSON 파일은 6MB 이하여야 합니다.'); const parsed=JSON.parse(text); if(Number(parsed.schemaVersion)>1)throw new Error('더 새로운 버전의 파일입니다. 앱을 업데이트해주세요.'); const project=normalizeProject(parsed.project??parsed); project.id=uid(); set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id}))}, clearStorageError(){set({storageError:null})}

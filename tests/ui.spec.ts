@@ -57,6 +57,66 @@ test('9개 템플릿에서 떠있는 이미지를 직접 추가·선택·이동�
 })
 
 test('9장의 인사이트 스토리 구성이 모든 신규 템플릿을 포함한다',async({page})=>{await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByLabel('구성 방식').selectOption('insight-story');await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.page-thumb')).toHaveCount(9);for(const [id] of templates)await expect(page.locator(`.page-thumb [data-template="${id}"]`)).toHaveCount(1)})
+test('페이지 썸네일은 클릭해 편집하고 드래그해 순서를 바꾼다',async({page})=>{
+  await create(page)
+  const body=page.getByRole('textbox',{name:/본문 \d/})
+  await body.fill('첫 번째 페이지')
+  await page.getByRole('button',{name:'복제'}).click()
+  await body.fill('두 번째 페이지')
+
+  const thumbs=page.locator('.page-thumb')
+  await thumbs.nth(0).click()
+  await expect(body).toHaveValue('첫 번째 페이지')
+  await expect(page.getByRole('button',{name:'선택한 페이지 위로 이동'})).toHaveCount(0)
+  await expect(page.getByRole('button',{name:'선택한 페이지 아래로 이동'})).toHaveCount(0)
+
+  const source=await thumbs.nth(0).boundingBox()
+  const target=await thumbs.nth(1).boundingBox()
+  if(!source||!target)throw new Error('페이지 썸네일 위치를 찾지 못했습니다.')
+  await page.mouse.move(source.x+source.width/2,source.y+source.height/2)
+  await page.mouse.down()
+  await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:10})
+  await page.mouse.up()
+
+  await expect(thumbs.nth(1)).toContainText('첫 번째 페이지')
+  await expect(body).toHaveValue('첫 번째 페이지')
+})
+test('모든 템플릿이 공통 디자인과 맞춤 레이아웃 설정을 저장하고 초기화한다',async({page})=>{
+  await create(page)
+  for(const [id,name] of templates){
+    await selectTemplate(page,name,id)
+    await expect(page.getByRole('heading',{name:'기본 디자인'})).toBeVisible()
+    await expect(page.getByRole('heading',{name:'레이아웃 설정'})).toBeVisible()
+    await expect(page.getByRole('button',{name:'초기화'})).toBeVisible()
+  }
+
+  await selectTemplate(page,'핵심 인사이트','list-insight')
+  await page.getByLabel('배경색 코드').fill('#223344')
+  await page.locator('[data-font-group="korean"]').getByText('Noto Sans KR',{exact:false}).click()
+  await page.getByRole('slider',{name:/제목 크기/}).fill('72')
+  await page.getByRole('slider',{name:/목록 간격/}).fill('34')
+  const list=page.locator('.preview-panel .list').first()
+  await expect(list).toHaveCSS('background-color','rgb(34, 51, 68)')
+  await expect(list).toHaveCSS('font-family',/Noto Sans KR Variable/)
+  await expect(list.locator('h1')).toHaveCSS('font-size','72px')
+  await expect(list.locator('ol')).toHaveCSS('gap','34px')
+
+  await page.reload()
+  await expect(page.getByLabel('배경색 코드')).toHaveValue('#223344')
+  await expect(page.getByRole('radio',{name:/Noto Sans KR/})).toBeChecked()
+  await expect(page.getByRole('slider',{name:/제목 크기/})).toHaveValue('72')
+
+  await page.getByRole('button',{name:'초기화'}).click()
+  await expect(page.getByLabel('배경색 코드')).toHaveValue('#F7EFE1')
+
+  await selectTemplate(page,'비교 분석','comparison')
+  await page.getByRole('slider',{name:/왼쪽 영역 비율/}).fill('60')
+  await expect(page.locator('.preview-panel .comparison-grid').first()).toHaveAttribute('style',/grid-template-columns: 60fr 40fr/)
+
+  await selectTemplate(page,'이미지 스토리','image-text')
+  await page.getByRole('slider',{name:/이미지 영역 높이/}).fill('61')
+  await expect(page.locator('.preview-panel .hero-image').first()).toHaveCSS('height','823.5px')
+})
 test('그라데이션 범위와 강도가 배경색과 배경 이미지에 저장·적용된다',async({page})=>{
   await create(page)
   const gradientToggle=page.getByRole('checkbox',{name:'그라데이션 사용'})

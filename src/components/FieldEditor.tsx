@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from 'react'
-import { englishFontFamilies, englishFontIds, getCardFontFamily, koreanFontIds, normalizeDesign } from '../brand/midnightDesign'
+import { englishFontFamilies, englishFontIds, getCardFontFamily, koreanFontIds, normalizeDesign } from '../brand/cardDesign'
 import { imageFileToDataUrl } from '../engine/imageTools'
 import { templateList, templateRegistry } from '../registry/templateRegistry'
 import type { CardPage, CardSize, EnglishFontId, KoreanFontId, TemplateId, TemplateManifest } from '../types'
@@ -89,7 +89,7 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
     setError('')
     onChange({ backgroundImage: null })
   }
-  const design = normalizeDesign(page.design)
+  const design = normalizeDesign(page.design, manifest.defaultDesign)
 
   return (
     <div className="field-editor">
@@ -191,7 +191,16 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
 
       {manifest.capabilities && (
         <section className="control-section design-controls" aria-labelledby="design-controls-title">
-          <h3 id="design-controls-title">기본 디자인</h3>
+          <div className="design-controls-heading">
+            <h3 id="design-controls-title">기본 디자인</h3>
+            <button
+              type="button"
+              className="subtle design-reset"
+              onClick={() => onChange({ design: normalizeDesign(manifest.defaultDesign, manifest.defaultDesign) })}
+            >
+              초기화
+            </button>
+          </div>
           <div className="design-color-grid">
             {manifest.capabilities.includes('backgroundColor') && (
               <label>배경색
@@ -255,10 +264,25 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
               </fieldset>
             </div>
           )}
-          {manifest.capabilities.includes('fontSize') && (
-            <label>본문 크기 <output>{design.fontSize}px</output>
-              <input aria-label={`본문 크기 ${design.fontSize}px`} type="range" min="40" max="84" step="2" value={design.fontSize} onChange={(event) => onChange({ design: { ...design, fontSize: Number(event.target.value) } })} />
-            </label>
+
+          {manifest.layoutControls && manifest.layoutControls.length > 0 && (
+            <div className="layout-controls" aria-labelledby="layout-controls-title">
+              <h4 id="layout-controls-title">레이아웃 설정</h4>
+              {manifest.layoutControls.map((control) => (
+                <label key={control.key}>
+                  {control.label} <output>{design[control.key]}{control.unit}</output>
+                  <input
+                    aria-label={`${control.label} ${design[control.key]}${control.unit}`}
+                    type="range"
+                    min={control.min}
+                    max={control.max}
+                    step={control.step}
+                    value={design[control.key]}
+                    onChange={(event) => onChange({ design: { ...design, [control.key]: Number(event.target.value) } })}
+                  />
+                </label>
+              ))}
+            </div>
           )}
 
           <details className="control-disclosure">

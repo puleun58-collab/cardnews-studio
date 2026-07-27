@@ -1,6 +1,6 @@
 import { useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { defaultCardSize, getCardFormat } from '../brand/cardSize'
-import { normalizeDesign } from '../brand/midnightDesign'
+import { normalizeDesign } from '../brand/cardDesign'
 import { templateRegistry } from '../registry/templateRegistry'
 import { clamp, OVERLAY_IMAGE_WIDTH } from '../engine/overlayImage'
 import type { CardOverlayImage, CardPage, CardSize } from '../types'
@@ -123,8 +123,8 @@ export function CardRenderer({
   }
 
   const format = getCardFormat(size)
-  const design = page.templateId === 'midnight-quote' ? normalizeDesign(page.design) : null
-  const backgroundGradient = design?.gradientEnabled
+  const design = normalizeDesign(page.design, manifest.defaultDesign)
+  const backgroundGradient = design.gradientEnabled
     ? `linear-gradient(180deg, transparent ${100 - design.gradientRange}%, rgb(0 0 0 / ${design.gradientStrength}%) 100%)`
     : undefined
   const layoutScale = size.width / 1080
