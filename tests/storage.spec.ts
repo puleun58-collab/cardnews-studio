@@ -56,6 +56,10 @@ test('기존 localStorage를 원본 보존 상태로 IndexedDB와 Blob 저장소
   await page.getByText('브라우저 저장소 관리').click()
   await expect(page.getByRole('button', { name: /이미지 포함 전체 백업/ })).toContainText('완전히 복구')
   await expect(page.getByRole('button', { name: /이미지 제외 경량 백업/ })).toContainText('이미지는 복구되지 않습니다')
+  await expect(page.locator('.keep-together')).toHaveCount(2)
+  await expect(page.locator('.keep-together').nth(0)).toHaveCSS('white-space', 'nowrap')
+  await expect(page.locator('.keep-together').nth(1)).toHaveCSS('white-space', 'nowrap')
+  await expect(page.locator('.storage-management summary')).toHaveCSS('list-style-type', 'none')
 
   const stored = await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {

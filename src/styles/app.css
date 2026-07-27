@@ -300,7 +300,39 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 .home > .storage-warning:not(.is-error) .storage-warning-actions .storage-backup-action { border-color: var(--ui-accent); background: var(--ui-accent); color: #ffffff; }
 .home > .storage-warning:not(.is-error) .storage-warning-actions .storage-backup-action:hover:not(:disabled) { border-color: #643711; background: #643711; color: #ffffff; }
 .storage-management { margin-top: 56px; border-block: 1px solid var(--ui-border); padding: 20px 0 24px; }
-.storage-management summary { cursor: pointer; font-size: 15px; font-weight: 700; }
+.storage-management summary {
+  width: min(860px, 100%);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: var(--radius-control);
+  padding: 4px 2px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+}
+.storage-management summary::-webkit-details-marker { display: none; }
+.storage-management summary::after {
+  content: "＋";
+  width: 28px;
+  height: 28px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-control);
+  color: var(--ui-text-muted);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+  transition: border-color var(--transition), background-color var(--transition), color var(--transition);
+}
+.storage-management[open] summary::after { content: "−"; }
+.storage-management summary:hover::after { border-color: var(--ui-border-strong); background: var(--ui-surface-raised); color: var(--ui-text); }
+.storage-management summary:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
 .storage-management > p { max-width: 760px; margin: 10px 0 18px; color: var(--ui-text-muted); font-size: 13px; line-height: 1.6; }
 .storage-backup-options { width: min(860px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .backup-option {
@@ -319,6 +351,7 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 .backup-option-heading { color: var(--ui-text); font-size: 14px; font-weight: 750; }
 .backup-option-heading small { margin-left: 6px; color: var(--ui-accent); font-size: 10px; font-weight: 750; }
 .backup-option > span:last-child { color: var(--ui-text-muted); font-size: 12px; font-weight: 500; line-height: 1.55; }
+.keep-together { white-space: nowrap; }
 .storage-maintenance-actions { margin-top: 14px; }
 .storage-maintenance-actions button { min-height: 38px; padding-block: 7px; font-size: 12px; }
 

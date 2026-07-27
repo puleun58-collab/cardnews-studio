@@ -49,11 +49,11 @@ function StorageManagement() {
       <div className="storage-backup-options" aria-label="JSON 백업 형식">
         <button type="button" className="backup-option is-recommended" onClick={backup}>
           <span className="backup-option-heading">이미지 포함 전체 백업 <small>권장</small></span>
-          <span>프로젝트, 디자인, 모든 이미지를 함께 저장합니다. 다른 브라우저에서도 완전히 복구할 수 있습니다.</span>
+          <span>프로젝트, 디자인, 모든 이미지를 함께 저장합니다. 다른 브라우저에서도 <span className="keep-together">완전히 복구할 수 있습니다.</span></span>
         </button>
         <button type="button" className="backup-option" onClick={lightweightBackup}>
           <span className="backup-option-heading">이미지 제외 경량 백업</span>
-          <span>텍스트와 디자인만 저장합니다. 파일은 작지만 업로드한 이미지는 복구되지 않습니다.</span>
+          <span>텍스트와 디자인만 저장합니다. 파일은 작지만 업로드한 이미지는 <span className="keep-together">복구되지 않습니다.</span></span>
         </button>
       </div>
       <div className="button-row storage-maintenance-actions">
