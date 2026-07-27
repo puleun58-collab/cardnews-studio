@@ -1,7 +1,6 @@
 export interface AppConfig {
   appName: string
   appDescription: string
-  accountLabel: string
   fileSlug: string
   storageKey: string
   maxPages: number
@@ -12,7 +11,6 @@ export interface AppConfig {
 export const appConfig: AppConfig = {
   appName: 'CARDNEWS STUDIO',
   appDescription: '글과 사진으로 만드는 세로형 카드뉴스',
-  accountLabel: '@hageon',
   fileSlug: 'my-card-studio',
   storageKey: 'cardnews-studio-hageon-v1',
   maxPages: 100,

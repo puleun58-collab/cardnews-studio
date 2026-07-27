@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react'
 import { getCardFontFamily, normalizeDesign } from '../brand/cardDesign'
-import { appConfig } from '../config/appConfig'
 import { richText } from '../engine/richtext'
 import { AutoFit } from '../engine/useAutoFit'
 import type { CardDesignSettings, CardPage, CardProps } from '../types'
@@ -33,10 +32,11 @@ const copyStyle = (design: CardDesignSettings): CSSProperties => ({
 })
 const Footer = ({ page, pageIndex, pageCount }: CardProps) => {
   const design = designFor(page)
+  if (!design.showPageNumber) return null
+
   return (
-    <footer className={`card-footer ${design.showPageNumber ? '' : 'centered'}`}>
-      <span>{appConfig.accountLabel}</span>
-      {design.showPageNumber && <span>{String(pageIndex + 1).padStart(2, '0')} / {String(pageCount).padStart(2, '0')}</span>}
+    <footer className="card-footer" style={{ justifyContent: 'flex-end' }}>
+      <span>{String(pageIndex + 1).padStart(2, '0')} / {String(pageCount).padStart(2, '0')}</span>
     </footer>
   )
 }

@@ -4,7 +4,7 @@
 
 ## 설정
 - 앱 이름: 카드뉴스 스튜디오
-- 계정 표시: @hageon
+- 템플릿 계정 표시: 없음
 - 파일 슬러그: my-card-studio
 - 색상: #141C33 / #FAF5EA / #F5A83B
 - 글꼴: 로컬 Pretendard Variable / KoPubWorld Batang·Dotum
