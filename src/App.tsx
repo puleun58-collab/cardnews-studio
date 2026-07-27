@@ -47,7 +47,7 @@ function StorageManagement() {
       <summary>브라우저 저장소 관리</summary>
       <p>프로젝트와 이미지는 이 브라우저에만 저장됩니다. 필요한 복구 범위에 맞춰 백업 형식을 선택하세요.</p>
       <div className="storage-backup-options" aria-label="JSON 백업 형식">
-        <button type="button" className="backup-option is-recommended" onClick={backup}>
+        <button type="button" className="backup-option" onClick={backup}>
           <span className="backup-option-heading">이미지 포함 전체 백업 <small>권장</small></span>
           <span>프로젝트, 디자인, 모든 이미지를 함께 저장합니다. 다른 브라우저에서도 <span className="keep-together">완전히 복구할 수 있습니다.</span></span>
         </button>

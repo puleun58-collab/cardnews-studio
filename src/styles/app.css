@@ -301,7 +301,7 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 .home > .storage-warning:not(.is-error) .storage-warning-actions .storage-backup-action:hover:not(:disabled) { border-color: #643711; background: #643711; color: #ffffff; }
 .storage-management { margin-top: 56px; border-block: 1px solid var(--ui-border); padding: 20px 0 24px; }
 .storage-management summary {
-  width: min(860px, 100%);
+  width: 100%;
   min-height: 40px;
   display: flex;
   align-items: center;
@@ -347,7 +347,6 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   white-space: normal;
 }
 .backup-option:hover:not(:disabled) { border-color: var(--ui-border-strong); background: #f0f0ec; }
-.backup-option.is-recommended { border-left: 3px solid var(--ui-accent); }
 .backup-option-heading { color: var(--ui-text); font-size: 14px; font-weight: 750; }
 .backup-option-heading small { margin-left: 6px; color: var(--ui-accent); font-size: 10px; font-weight: 750; }
 .backup-option > span:last-child { color: var(--ui-text-muted); font-size: 12px; font-weight: 500; line-height: 1.55; }
