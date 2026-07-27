@@ -8,8 +8,9 @@
     "local": "vite --host 127.0.0.1 --port 5273",
     "build": "tsc -b && vite build",
     "lint": "oxlint src tests",
+    "test:unit": "vitest run",
     "preview": "vite preview --host 127.0.0.1 --port 5273",
-    "verify:ui": "playwright test tests/ui.spec.ts tests/imports.spec.ts",
+    "verify:ui": "playwright test tests/ui.spec.ts tests/imports.spec.ts tests/storage.spec.ts",
     "verify:a11y": "playwright test tests/accessibility.spec.ts",
     "verify:exports": "playwright test tests/exports.spec.ts",
     "verify:brand": "node scripts/verify-brand.mjs",
@@ -40,10 +41,12 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.3",
+    "fake-indexeddb": "^6.2.5",
     "lighthouse": "^13.4.1",
     "oxlint": "^1.71.0",
     "pngjs": "^7.0.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
   }
 }

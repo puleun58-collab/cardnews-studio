@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { appConfig } from './config/appConfig'
-import { exportProjectJson, useStudioStore } from './store/studioStore'
+import { exportLightweightWorkspaceJson, exportProjectJson, exportWorkspaceJson, useStudioStore } from './store/studioStore'
 import { templateList } from './registry/templateRegistry'
 import { compositions } from './compositions'
 import { CardRenderer } from './components/CardRenderer'
 import { PagePanel } from './components/PagePanel'
 import { PreviewPane } from './components/PreviewPane'
 import { FieldEditor } from './components/FieldEditor'
-import { downloadJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
+import { downloadJson, downloadWorkspaceJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
 import { ExportStage } from './components/ExportStage'
+import { StorageStatusPanel } from './components/StorageStatusPanel'
 import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize } from './brand/cardSize'
 import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
 import './styles/app.css'
@@ -19,6 +20,42 @@ import './styles/fonts.css'
 type Panel = 'pages' | 'preview' | 'edit'
 type ZoomMode = 'fit' | 50 | 75 | 100
 type OperationStatus = { kind: 'idle' | 'loading' | 'success' | 'error'; message: string; recovery?: 'import' }
+
+function StorageManagement() {
+  const store = useStudioStore()
+  const [message, setMessage] = useState('')
+  const backup = () => {
+    downloadWorkspaceJson(exportWorkspaceJson(store.projects))
+    setMessage('전체 프로젝트 JSON 백업을 저장했습니다.')
+  }
+  const lightweightBackup = () => {
+    downloadWorkspaceJson(exportLightweightWorkspaceJson(store.projects), 'workspace-lightweight')
+    setMessage('이미지를 제외한 경량 JSON 백업을 저장했습니다.')
+  }
+  const cleanup = async () => {
+    const removed = await store.cleanupUnusedImages()
+    setMessage(removed ? `사용하지 않는 이미지 ${removed}개를 정리했습니다.` : '정리할 이미지가 없습니다.')
+  }
+  const clear = async () => {
+    if (!confirm('브라우저 저장소를 초기화하면 모든 프로젝트가 삭제됩니다. 먼저 JSON 백업을 저장하는 것을 권장합니다. 계속할까요?')) return
+    if (!confirm('정말 초기화할까요? JSON 백업이 없으면 복구할 수 없습니다.')) return
+    await store.clearBrowserStorage()
+    setMessage('브라우저 저장소를 초기화했습니다.')
+  }
+  return (
+    <details className="storage-management">
+      <summary>브라우저 저장소 관리</summary>
+      <p>프로젝트와 이미지는 이 브라우저의 IndexedDB에 저장됩니다. 초기화 전에는 전체 JSON 백업을 권장합니다.</p>
+      <div className="button-row">
+        <button type="button" onClick={backup}>전체 JSON 백업</button>
+        <button type="button" onClick={lightweightBackup}>경량 JSON 백업</button>
+        <button type="button" onClick={() => void cleanup()}>이미지 정리</button>
+        <button type="button" className="danger" onClick={() => void clear()}>저장소 초기화</button>
+      </div>
+      {message && <p role="status">{message}</p>}
+    </details>
+  )
+}
 
 function CanvasSizeControl({ size, onChange }: { size: CardSize; onChange: (size: CardSize) => void }) {
   const [mode, setMode] = useState<CardSizePreset>(() => getCardSizePreset(size))
@@ -86,6 +123,7 @@ function ProjectHome() {
             <p>{appConfig.appDescription}</p>
           </div>
         </header>
+        <StorageStatusPanel />
 
         <section className="new-project" aria-labelledby="new-project-title">
           <div className="new-project-intro">
@@ -171,6 +209,7 @@ function ProjectHome() {
             </div>
           )}
         </section>
+        <StorageManagement />
       </main>
     </div>
   )
@@ -332,6 +371,12 @@ function Editor() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [redo, undo])
 
+  useEffect(() => {
+    if (status.kind !== 'success') return
+    const timer = setTimeout(() => setStatus({ kind: 'idle', message: '' }), 2500)
+    return () => clearTimeout(timer)
+  }, [status.kind])
+
   if (!project) {
     return (
       <main className="state-page" id="main-content">
@@ -345,9 +390,21 @@ function Editor() {
 
   const page = project.pages.find((item) => item.id === store.activePageId) ?? project.pages[0]
   const index = project.pages.findIndex((item) => item.id === page.id)
+  const saveStatusKind: OperationStatus['kind'] = store.saveStatus.phase === 'error'
+    ? 'error'
+    : store.saveStatus.phase === 'saving' || store.saveStatus.dirty
+      ? 'loading'
+      : store.saveStatus.phase === 'saved'
+        ? 'success'
+        : 'idle'
+  const lastSaved = store.saveStatus.lastSavedAt
+    ? ` · ${new Date(store.saveStatus.lastSavedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`
+    : ''
   const visibleStatus: OperationStatus = store.storageError
     ? { kind: 'error', message: store.storageError }
-    : status
+    : status.kind !== 'idle'
+      ? status
+      : { kind: saveStatusKind, message: `${store.saveStatus.message}${lastSaved}` }
 
   const run = async (label: string, action: () => Promise<void>) => {
     try {
@@ -409,6 +466,7 @@ function Editor() {
           <button type="button" className="primary" disabled={busy} onClick={() => run('ZIP', () => exportZip(stage.current!, project, (message) => setStatus({ kind: 'loading', message })))}>ZIP</button>
         </div>
       </header>
+      <StorageStatusPanel />
 
       <main className="workspace" id="main-content">
         <div className={`mobile-panel ${panel === 'pages' ? 'shown' : ''}`}>
@@ -450,5 +508,15 @@ function Editor() {
 
 export default function App() {
   const active = useStudioStore((state) => state.activeProjectId)
+  const hydrationState = useStudioStore((state) => state.hydrationState)
+  const hydrationError = useStudioStore((state) => state.hydrationError)
+  const initialize = useStudioStore((state) => state.initialize)
+  useEffect(() => { void initialize() }, [initialize])
+  if (hydrationState === 'loading') {
+    return <main className="state-page"><span className="section-label">저장소 준비</span><h1>프로젝트를 불러오는 중입니다</h1><p>기존 데이터가 있으면 안전하게 이전합니다.</p></main>
+  }
+  if (hydrationState === 'error') {
+    return <main className="state-page"><span className="section-label">저장소 오류</span><h1>프로젝트를 불러오지 못했습니다</h1><p role="alert">{hydrationError}</p><button type="button" onClick={() => location.reload()}>다시 시도</button></main>
+  }
   return active ? <Editor /> : <ProjectHome />
 }

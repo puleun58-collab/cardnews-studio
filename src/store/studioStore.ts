@@ -1,76 +1,473 @@
 import { create } from 'zustand'
-import { appConfig } from '../config/appConfig'
 import { normalizeDesign } from '../brand/cardDesign'
+import { normalizeCardSize } from '../brand/cardSize'
+import { appConfig } from '../config/appConfig'
+import { deletePageData, insertDuplicatePage, reorderPageData, replaceTemplateData, createPage } from '../domain/page/pageOperations'
+import { createProjectData, duplicateProjectData } from '../domain/project/projectOperations'
+import { exportLightweightWorkspaceJson, exportProjectJson, exportWorkspaceJson, importProjectsJson } from '../domain/project/projectTransfer'
+import { clone, nowIso } from '../domain/shared'
 import { normalizeOverlayImage } from '../engine/overlayImage'
-import { defaultCardSize, normalizeCardSize } from '../brand/cardSize'
+import { IndexedDbProjectRepository } from '../repositories/indexedDbProjectRepository'
+import { migrateLegacyLocalStorage, LegacyStorageMigrationError } from '../storage/legacyMigration'
+import { classifyStorageError, type StorageFailureKind } from '../storage/storageErrors'
 import { templateRegistry } from '../registry/templateRegistry'
 import type { CardPage, CardSize, Project, TemplateId } from '../types'
+import { getUserFacingDataError, normalizeProjectData } from '../validation/projectSchema'
+import { initialSaveStatus, PersistenceCoordinator, type SaveStatus } from './persistenceCoordinator'
 
-const uid = () => crypto.randomUUID()
-const now = () => new Date().toISOString()
-export function createPage(templateId: TemplateId = 'midnight-quote'): CardPage {
-  const manifest = templateRegistry[templateId]
-  return { id: uid(), templateId, variantId: manifest.defaultVariant, content: structuredClone(manifest.sampleContent.content), backgroundImage: null, image: manifest.sampleContent.image ?? null, overlayImage: null, design: manifest.defaultDesign ? normalizeDesign(manifest.defaultDesign, manifest.defaultDesign) : undefined }
+type HydrationState = 'loading' | 'ready' | 'error'
+
+type SessionState = {
+  activeProjectId: string | null
+  activePageId: string | null
 }
-function normalizePage(raw: unknown): CardPage {
-  if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 페이지입니다.')
-  const p = raw as Partial<CardPage>
-  if (!p.templateId || !(p.templateId in templateRegistry)) throw new Error('알 수 없는 템플릿입니다.')
-  const manifest = templateRegistry[p.templateId]
-  const content: Record<string, string | string[]> = {}
-  for (const field of manifest.fields) {
-    if (field.type === 'image') continue
-    const rawValue = p.content?.[field.key]
-    content[field.key] = field.type === 'list' ? (Array.isArray(rawValue) ? rawValue.slice(0, 5).map(String) : []) : String(rawValue ?? '').slice(0, field.maxLength)
-  }
-  return { id: typeof p.id === 'string' ? p.id : uid(), templateId:p.templateId, variantId:typeof p.variantId === 'string' ? p.variantId : manifest.defaultVariant, content, backgroundImage:typeof p.backgroundImage === 'string' ? p.backgroundImage : null, image:typeof p.image === 'string' ? p.image : null, overlayImage:normalizeOverlayImage(p.overlayImage), design:normalizeDesign(p.design, manifest.defaultDesign) }
-}
-function normalizeProject(raw: unknown): Project {
-  if (!raw || typeof raw !== 'object') throw new Error('올바르지 않은 프로젝트 파일입니다.')
-  const p = raw as Partial<Project>
-  if ((p.schemaVersion ?? 1) > 1) throw new Error('더 새로운 버전의 파일입니다. 앱을 업데이트해주세요.')
-  if (!Array.isArray(p.pages) || p.pages.length < 1 || p.pages.length > appConfig.maxPages) throw new Error(`페이지는 1~${appConfig.maxPages}장이어야 합니다.`)
-  return { schemaVersion:1, id:typeof p.id === 'string' ? p.id : uid(), name:String(p.name || '가져온 프로젝트').slice(0, 80), createdAt:typeof p.createdAt === 'string' ? p.createdAt : now(), updatedAt:now(), canvasSize:normalizeCardSize(p.canvasSize), pages:p.pages.map(normalizePage) }
-}
-interface StudioState {
-  projects: Project[]; activeProjectId: string | null; activePageId: string | null; storageError: string | null
-  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[], canvasSize?: CardSize, initialImage?: string): void; openProject(id: string): void; goHome(): void
-  renameProject(id: string, name: string): void; duplicateProject(id: string): void; deleteProject(id: string): void
+
+export interface StudioState {
+  projects: Project[]
+  activeProjectId: string | null
+  activePageId: string | null
+  hydrationState: HydrationState
+  hydrationError: string | null
+  migrationNotice: string | null
+  storageError: string | null
+  storageFailureKind: StorageFailureKind | null
+  saveStatus: SaveStatus
+  initialize(): Promise<void>
+  createProject(name: string, templateId?: TemplateId, templateIds?: TemplateId[], canvasSize?: CardSize, initialImage?: string): void
+  openProject(id: string): void
+  goHome(): void
+  renameProject(id: string, name: string): void
+  duplicateProject(id: string): void
+  deleteProject(id: string): void
   updateProjectCanvasSize(id: string, canvasSize: CardSize): void
-  setActivePage(id: string): void; addPage(templateId?: TemplateId): void; duplicatePage(id: string): void; deletePage(id: string): void; reorderPages(oldIndex: number, newIndex: number): void
-  updatePage(id: string, patch: Partial<CardPage>): void; replacePageTemplate(id: string, templateId: TemplateId): void
+  setActivePage(id: string): void
+  addPage(templateId?: TemplateId): void
+  duplicatePage(id: string): void
+  deletePage(id: string): void
+  reorderPages(oldIndex: number, newIndex: number): void
+  updatePage(id: string, patch: Partial<CardPage>): void
+  replacePageTemplate(id: string, templateId: TemplateId): void
   restoreActiveProject(project: Project, activePageId?: string | null): void
-  importProject(text: string): void; clearStorageError(): void
+  importProject(text: string): void
+  retrySave(): Promise<void>
+  flushPending(): Promise<void>
+  cleanupUnusedImages(): Promise<number>
+  clearBrowserStorage(): Promise<void>
+  clearStorageError(): void
 }
-const initial = (() => {
+
+const repository = new IndexedDbProjectRepository()
+const persistence = new PersistenceCoordinator(repository)
+let initialization: Promise<void> | null = null
+
+function readSession(): SessionState {
   try {
-    const value=localStorage.getItem(appConfig.storageKey)
-    if(!value)return {projects:[] as Project[],activeProjectId:null as string|null,activePageId:null as string|null}
-    const parsed=JSON.parse(value)
-    return {projects:Array.isArray(parsed.projects)?parsed.projects.map(normalizeProject):[],activeProjectId:typeof parsed.activeProjectId==='string'?parsed.activeProjectId:null,activePageId:typeof parsed.activePageId==='string'?parsed.activePageId:null}
+    const value = localStorage.getItem(appConfig.sessionStorageKey)
+    if (!value) return { activeProjectId: null, activePageId: null }
+    const parsed = JSON.parse(value) as Partial<SessionState>
+    return {
+      activeProjectId: typeof parsed.activeProjectId === 'string' ? parsed.activeProjectId : null,
+      activePageId: typeof parsed.activePageId === 'string' ? parsed.activePageId : null,
+    }
   } catch {
-    const value=localStorage.getItem(appConfig.storageKey)
-    if(value)localStorage.setItem(`${appConfig.storageKey}-corrupt-${Date.now()}`,value)
-    return {projects:[] as Project[],activeProjectId:null,activePageId:null}
+    return { activeProjectId: null, activePageId: null }
   }
-})()
+}
+
+function writeRecoveryJournal() {
+  const dirtyIds = new Set(persistence.getDirtyProjectIds())
+  if (!dirtyIds.size) return
+  const projects = useStudioStore.getState().projects.filter((project) => dirtyIds.has(project.id))
+  if (!projects.length) return
+  try {
+    sessionStorage.setItem(appConfig.recoveryStorageKey, JSON.stringify({ projects }))
+  } catch (error) {
+    setPersistentStorageError(error)
+  }
+}
+
+function readRecoveryJournal(): Project[] {
+  try {
+    const raw = sessionStorage.getItem(appConfig.recoveryStorageKey)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as { projects?: unknown[] }
+    return Array.isArray(parsed.projects) ? parsed.projects.map(normalizeProjectData) : []
+  } catch {
+    return []
+  }
+}
+
+function setPersistentStorageError(error: unknown) {
+  const failure = classifyStorageError(error)
+  useStudioStore.setState({
+    storageError: failure.message,
+    storageFailureKind: failure.kind,
+  })
+}
+
+function persistSession() {
+  const { activeProjectId, activePageId } = useStudioStore.getState()
+  try {
+    localStorage.setItem(appConfig.sessionStorageKey, JSON.stringify({ activeProjectId, activePageId }))
+  } catch (error) {
+    setPersistentStorageError(error)
+  }
+}
+
+function activeProject(state: StudioState) {
+  return state.projects.find((project) => project.id === state.activeProjectId) ?? null
+}
+
+function markProject(projectId: string, options: { immediate?: boolean; pageIds?: Iterable<string> } = {}) {
+  persistence.markDirty(projectId, options)
+}
+
+function updateProject(
+  set: (updater: (state: StudioState) => Partial<StudioState>) => void,
+  projectId: string,
+  updater: (project: Project) => Project | null,
+) {
+  let changed = false
+  set((state) => ({
+    projects: state.projects.map((project) => {
+      if (project.id !== projectId) return project
+      const next = updater(project)
+      if (!next || next === project) return project
+      changed = true
+      return next
+    }),
+  }))
+  return changed
+}
+
 export const useStudioStore = create<StudioState>((set, get) => ({
-  projects:initial.projects, activeProjectId:initial.activeProjectId, activePageId:initial.activePageId, storageError:null,
-  createProject(name, templateId='midnight-quote', templateIds, canvasSize=defaultCardSize, initialImage) { const pages=(templateIds?.length?templateIds:[templateId]).map(createPage); if(initialImage)pages[0]={...pages[0],backgroundImage:initialImage}; const project:Project={schemaVersion:1,id:uid(),name:name.trim()||'새 프로젝트',createdAt:now(),updatedAt:now(),canvasSize:normalizeCardSize(canvasSize),pages}; set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id})) },
-  openProject(id) { const p=get().projects.find(x=>x.id===id); if(p) set({activeProjectId:id,activePageId:p.pages[0]?.id??null}) }, goHome(){set({activeProjectId:null,activePageId:null})},
-  renameProject(id,name){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,name:name.trim()||p.name,updatedAt:now()}:p)}))},
-  duplicateProject(id){set(s=>{const src=s.projects.find(p=>p.id===id); if(!src)return s; const copy:Project={...structuredClone(src),id:uid(),name:`${src.name} 복사본`,createdAt:now(),updatedAt:now(),pages:src.pages.map(p=>({...structuredClone(p),id:uid()}))}; return {projects:[copy,...s.projects]}})},
-  deleteProject(id){set(s=>({projects:s.projects.filter(p=>p.id!==id),activeProjectId:s.activeProjectId===id?null:s.activeProjectId,activePageId:s.activeProjectId===id?null:s.activePageId}))},
-  updateProjectCanvasSize(id,canvasSize){set(s=>({projects:s.projects.map(p=>p.id===id?{...p,canvasSize:normalizeCardSize(canvasSize),updatedAt:now()}:p)}))},
-  setActivePage(activePageId){set({activePageId})},
-  addPage(templateId='midnight-quote'){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length>=appConfig.maxPages)return p; const page=createPage(templateId); queueMicrotask(()=>set({activePageId:page.id})); return {...p,pages:[...p.pages,page],updatedAt:now()}})}))},
-  duplicatePage(id){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length>=appConfig.maxPages)return p; const source=p.pages.find(x=>x.id===id); if(!source)return p; const copy={...structuredClone(source),id:uid()}; queueMicrotask(()=>set({activePageId:copy.id})); const at=p.pages.findIndex(x=>x.id===id)+1; const pages=[...p.pages]; pages.splice(at,0,copy); return {...p,pages,updatedAt:now()}})}))},
-  deletePage(id){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId||p.pages.length===1)return p; const pages=p.pages.filter(x=>x.id!==id); if(s.activePageId===id)queueMicrotask(()=>set({activePageId:pages[0].id})); return {...p,pages,updatedAt:now()}})}))},
-  reorderPages(oldIndex,newIndex){set(s=>({projects:s.projects.map(p=>{if(p.id!==s.activeProjectId)return p; const pages=[...p.pages]; const [item]=pages.splice(oldIndex,1); pages.splice(newIndex,0,item); return {...p,pages,updatedAt:now()}})}))},
-  updatePage(id,patch){set(s=>({projects:s.projects.map(p=>p.id!==s.activeProjectId?p:{...p,updatedAt:now(),pages:p.pages.map(page=>page.id===id?{...page,...patch,design:patch.design?normalizeDesign(patch.design,templateRegistry[page.templateId].defaultDesign):page.design,overlayImage:patch.overlayImage===undefined?page.overlayImage:normalizeOverlayImage(patch.overlayImage)}:page)})}))},
-  replacePageTemplate(id,templateId){const replacement=createPage(templateId); get().updatePage(id,{...replacement,id})},
-  restoreActiveProject(project,activePageId){set(s=>{if(project.id!==s.activeProjectId)return s;const restored=structuredClone(project);const nextPageId=activePageId&&restored.pages.some(page=>page.id===activePageId)?activePageId:restored.pages[0]?.id??null;return {projects:s.projects.map(item=>item.id===restored.id?restored:item),activePageId:nextPageId}})},
-  importProject(text){if(new Blob([text]).size>appConfig.maxJsonBytes)throw new Error('JSON 파일은 6MB 이하여야 합니다.'); const parsed=JSON.parse(text); if(Number(parsed.schemaVersion)>1)throw new Error('더 새로운 버전의 파일입니다. 앱을 업데이트해주세요.'); const project=normalizeProject(parsed.project??parsed); project.id=uid(); set(s=>({projects:[project,...s.projects],activeProjectId:project.id,activePageId:project.pages[0].id}))}, clearStorageError(){set({storageError:null})}
+  projects: [],
+  activeProjectId: null,
+  activePageId: null,
+  hydrationState: 'loading',
+  hydrationError: null,
+  migrationNotice: null,
+  storageError: null,
+  storageFailureKind: null,
+  saveStatus: initialSaveStatus,
+
+  async initialize() {
+    if (initialization) return initialization
+    initialization = (async () => {
+      set({ hydrationState: 'loading', hydrationError: null })
+      let migrationNotice: string | null = null
+      let migratedSession: SessionState = { activeProjectId: null, activePageId: null }
+      try {
+        try {
+          const result = await migrateLegacyLocalStorage(repository)
+          migratedSession = { activeProjectId: result.activeProjectId, activePageId: result.activePageId }
+          if (result.performed && result.migrated > 0) migrationNotice = `기존 프로젝트 ${result.migrated}개를 새 저장소로 안전하게 이전했습니다.`
+        } catch (error) {
+          if (error instanceof LegacyStorageMigrationError) {
+            migrationNotice = error.userMessage
+            set({ storageError: error.userMessage, storageFailureKind: 'unknown' })
+          } else {
+            throw error
+          }
+        }
+        let projects = await repository.getAllProjects()
+        const recoveredProjects = readRecoveryJournal()
+        if (recoveredProjects.length) {
+          const recoveredById = new Map(recoveredProjects.map((project) => [project.id, project]))
+          projects = projects
+            .map((project) => {
+              const recovered = recoveredById.get(project.id)
+              if (!recovered || recovered.updatedAt < project.updatedAt) return project
+              recoveredById.delete(project.id)
+              return recovered
+            })
+            .concat([...recoveredById.values()])
+            .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+          for (const project of recoveredProjects) await repository.saveProject(project)
+          sessionStorage.removeItem(appConfig.recoveryStorageKey)
+        }
+        const session = readSession()
+        const requestedProjectId = session.activeProjectId ?? migratedSession.activeProjectId
+        const selectedProject = projects.find((project) => project.id === requestedProjectId) ?? null
+        const requestedPageId = session.activePageId ?? migratedSession.activePageId
+        const selectedPageId = selectedProject?.pages.some((page) => page.id === requestedPageId)
+          ? requestedPageId
+          : selectedProject?.pages[0]?.id ?? null
+        set({
+          projects,
+          activeProjectId: selectedProject?.id ?? null,
+          activePageId: selectedPageId,
+          hydrationState: 'ready',
+          hydrationError: null,
+          migrationNotice,
+        })
+        persistence.setInitialSavedState(projects[0]?.updatedAt ?? null)
+      } catch (error) {
+        const failure = classifyStorageError(error)
+        set({
+          hydrationState: 'error',
+          hydrationError: failure.message,
+          storageError: failure.message,
+          storageFailureKind: failure.kind,
+        })
+      }
+    })()
+    return initialization
+  },
+
+  createProject(name, templateId = 'midnight-quote', templateIds, canvasSize, initialImage) {
+    const project = createProjectData(name, templateId, templateIds, canvasSize, initialImage)
+    set((state) => ({
+      projects: [project, ...state.projects],
+      activeProjectId: project.id,
+      activePageId: project.pages[0].id,
+    }))
+    persistSession()
+    markProject(project.id, { immediate: true })
+  },
+
+  openProject(id) {
+    const project = get().projects.find((item) => item.id === id)
+    if (!project) return
+    set({ activeProjectId: id, activePageId: project.pages[0]?.id ?? null })
+    persistSession()
+  },
+
+  goHome() {
+    set({ activeProjectId: null, activePageId: null })
+    persistSession()
+    void persistence.flushAll()
+  },
+
+  renameProject(id, name) {
+    const changed = updateProject(set, id, (project) => {
+      const nextName = name.trim().slice(0, 80) || project.name
+      if (nextName === project.name) return null
+      return { ...project, name: nextName, updatedAt: nowIso() }
+    })
+    if (changed) markProject(id, { pageIds: [] })
+  },
+
+  duplicateProject(id) {
+    const source = get().projects.find((project) => project.id === id)
+    if (!source) return
+    const copy = duplicateProjectData(source, new Set(get().projects.map((project) => project.id)))
+    set((state) => ({ projects: [copy, ...state.projects] }))
+    markProject(copy.id, { immediate: true })
+  },
+
+  deleteProject(id) {
+    if (!get().projects.some((project) => project.id === id)) return
+    const wasActive = get().activeProjectId === id
+    set((state) => ({
+      projects: state.projects.filter((project) => project.id !== id),
+      activeProjectId: wasActive ? null : state.activeProjectId,
+      activePageId: wasActive ? null : state.activePageId,
+    }))
+    persistSession()
+    void persistence.deleteProject(id)
+  },
+
+  updateProjectCanvasSize(id, canvasSize) {
+    const normalized = normalizeCardSize(canvasSize)
+    const changed = updateProject(set, id, (project) => (
+      project.canvasSize.width === normalized.width && project.canvasSize.height === normalized.height
+        ? null
+        : { ...project, canvasSize: normalized, updatedAt: nowIso() }
+    ))
+    if (changed) markProject(id, { pageIds: [] })
+  },
+
+  setActivePage(id) {
+    const project = activeProject(get())
+    if (!project?.pages.some((page) => page.id === id)) return
+    set({ activePageId: id })
+    persistSession()
+  },
+
+  addPage(templateId = 'midnight-quote') {
+    if (!(templateId in templateRegistry)) return
+    const project = activeProject(get())
+    if (!project || project.pages.length >= appConfig.maxPages) return
+    const page = createPage(templateId)
+    const changed = updateProject(set, project.id, (current) => ({
+      ...current,
+      pages: [...current.pages, page],
+      updatedAt: nowIso(),
+    }))
+    if (!changed) return
+    set({ activePageId: page.id })
+    persistSession()
+    markProject(project.id, { immediate: true })
+  },
+
+  duplicatePage(id) {
+    const project = activeProject(get())
+    if (!project) return
+    const pages = insertDuplicatePage(project.pages, id)
+    if (!pages) return
+    const index = pages.findIndex((page, pageIndex) => pageIndex > 0 && page.id !== project.pages[pageIndex]?.id)
+    const copy = index >= 0 ? pages[index] : pages[project.pages.findIndex((page) => page.id === id) + 1]
+    const changed = updateProject(set, project.id, (current) => ({ ...current, pages, updatedAt: nowIso() }))
+    if (!changed || !copy) return
+    set({ activePageId: copy.id })
+    persistSession()
+    markProject(project.id, { immediate: true })
+  },
+
+  deletePage(id) {
+    const project = activeProject(get())
+    if (!project) return
+    const pages = deletePageData(project.pages, id)
+    if (!pages) return
+    const changed = updateProject(set, project.id, (current) => ({ ...current, pages, updatedAt: nowIso() }))
+    if (!changed) return
+    if (get().activePageId === id) set({ activePageId: pages[0].id })
+    persistSession()
+    markProject(project.id, { immediate: true })
+  },
+
+  reorderPages(oldIndex, newIndex) {
+    const project = activeProject(get())
+    if (!project) return
+    const pages = reorderPageData(project.pages, oldIndex, newIndex)
+    if (!pages) return
+    const changed = updateProject(set, project.id, (current) => ({ ...current, pages, updatedAt: nowIso() }))
+    if (changed) markProject(project.id, { immediate: true })
+  },
+
+  updatePage(id, patch) {
+    const project = activeProject(get())
+    const page = project?.pages.find((item) => item.id === id)
+    if (!project || !page) return
+    const safePatch: Partial<CardPage> = {
+      content: patch.content,
+      backgroundImage: patch.backgroundImage,
+      image: patch.image,
+      overlayImage: patch.overlayImage,
+      design: patch.design,
+      variantId: patch.variantId,
+    }
+    const nextPage: CardPage = {
+      ...page,
+      ...Object.fromEntries(Object.entries(safePatch).filter(([, value]) => value !== undefined)),
+      id: page.id,
+      templateId: page.templateId,
+      design: patch.design ? normalizeDesign(patch.design, templateRegistry[page.templateId].defaultDesign) : page.design,
+      overlayImage: patch.overlayImage === undefined ? page.overlayImage : normalizeOverlayImage(patch.overlayImage),
+    }
+    const changed = updateProject(set, project.id, (current) => ({
+      ...current,
+      updatedAt: nowIso(),
+      pages: current.pages.map((item) => item.id === id ? nextPage : item),
+    }))
+    if (changed) markProject(project.id, { pageIds: [id] })
+  },
+
+  replacePageTemplate(id, templateId) {
+    const project = activeProject(get())
+    const page = project?.pages.find((item) => item.id === id)
+    if (!project || !page || !(templateId in templateRegistry)) return
+    const replacement = replaceTemplateData(page, templateId)
+    if (!replacement) return
+    const changed = updateProject(set, project.id, (current) => ({
+      ...current,
+      updatedAt: nowIso(),
+      pages: current.pages.map((item) => item.id === id ? replacement : item),
+    }))
+    if (changed) markProject(project.id, { immediate: true, pageIds: [id] })
+  },
+
+  restoreActiveProject(project, activePageId) {
+    const state = get()
+    if (project.id !== state.activeProjectId || !state.projects.some((item) => item.id === project.id)) return
+    let restored: Project
+    try {
+      restored = normalizeProjectData(clone(project))
+    } catch {
+      return
+    }
+    const nextPageId = activePageId && restored.pages.some((page) => page.id === activePageId)
+      ? activePageId
+      : restored.pages[0]?.id ?? null
+    set((current) => ({
+      projects: current.projects.map((item) => item.id === restored.id ? restored : item),
+      activePageId: nextPageId,
+    }))
+    persistSession()
+    markProject(restored.id, { immediate: true })
+  },
+
+  importProject(text) {
+    let imported: Project[]
+    try {
+      imported = importProjectsJson(text)
+    } catch (error) {
+      throw new Error(getUserFacingDataError(error))
+    }
+    const [project] = imported
+    set((state) => ({
+      projects: [...imported, ...state.projects],
+      activeProjectId: project.id,
+      activePageId: project.pages[0].id,
+    }))
+    persistSession()
+    imported.forEach((item) => markProject(item.id, { immediate: true }))
+  },
+
+  async retrySave() {
+    set({ storageError: null, storageFailureKind: null })
+    persistSession()
+    await persistence.retry()
+  },
+
+  async flushPending() {
+    await persistence.flushAll()
+  },
+
+  async cleanupUnusedImages() {
+    await persistence.flushAll()
+    const removed = await repository.deleteUnusedImages()
+    await persistence.refreshEstimate(true)
+    return removed
+  },
+
+  async clearBrowserStorage() {
+    await persistence.flushAll()
+    await repository.clearAll()
+    localStorage.removeItem(appConfig.sessionStorageKey)
+    localStorage.removeItem(appConfig.storageKey)
+    sessionStorage.removeItem(appConfig.recoveryStorageKey)
+    set({
+      projects: [],
+      activeProjectId: null,
+      activePageId: null,
+      storageError: null,
+      storageFailureKind: null,
+      saveStatus: { ...initialSaveStatus, phase: 'saved', message: '브라우저 저장소 초기화 완료' },
+    })
+  },
+
+  clearStorageError() {
+    set({ storageError: null, storageFailureKind: null })
+  },
 }))
-useStudioStore.subscribe(state=>{try{localStorage.setItem(appConfig.storageKey,JSON.stringify({projects:state.projects,activeProjectId:state.activeProjectId,activePageId:state.activePageId}))}catch{if(!state.storageError)useStudioStore.setState({storageError:'저장 공간이 부족합니다. 이미지를 줄이거나 JSON으로 백업해주세요.'})}})
-export function exportProjectJson(project: Project){return JSON.stringify({schemaVersion:1,exportedAt:now(),app:{name:appConfig.appName},project},null,2)}
+
+persistence.bind({
+  getProject: (id) => useStudioStore.getState().projects.find((project) => project.id === id) ?? null,
+  setStatus: (saveStatus) => useStudioStore.setState({ saveStatus }),
+})
+
+if (typeof window !== 'undefined') {
+  const flush = () => {
+    writeRecoveryJournal()
+    void persistence.flushAll()
+  }
+  window.addEventListener('pagehide', flush)
+  window.addEventListener('beforeunload', flush)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush()
+  })
+}
+
+export { exportLightweightWorkspaceJson, exportProjectJson, exportWorkspaceJson }

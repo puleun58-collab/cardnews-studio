@@ -9,9 +9,9 @@ export async function imageFileToDataUrl(file: File): Promise<string> {
       const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('이미지를 읽을 수 없습니다.')); img.src = url
     })
     if (image.naturalWidth * image.naturalHeight > appConfig.maxImagePixels) throw new Error('이미지 해상도가 너무 큽니다.')
-    const scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight))
+    const scale = Math.min(1, appConfig.maxImageDimension / Math.max(image.naturalWidth, image.naturalHeight))
     const canvas = document.createElement('canvas'); canvas.width = Math.round(image.naturalWidth * scale); canvas.height = Math.round(image.naturalHeight * scale)
     canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/webp', 0.9)
+    return canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/webp', appConfig.imageQuality)
   } finally { URL.revokeObjectURL(url) }
 }

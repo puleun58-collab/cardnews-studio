@@ -12,9 +12,9 @@
 ## 마일스톤
 - [x] M0 React 18 + TypeScript strict + Vite, 설정·토큰·로컬 글꼴
 - [x] M1 프로젝트 홈, 한 장/5장 추천 구성, 열기·이름 변경·복제·확인 후 삭제
-- [x] M2 Zustand 상태, localStorage 자동 저장, schema v1, 이전 데이터 정규화·손상 백업
+- [x] M2 Zustand 상태, legacy localStorage 자동 저장, schema v1, 이전 데이터 정규화·손상 백업
 - [x] M3 단일 CardRenderer, 1080×1350 원본, 강조 문법, AutoFit, padding 제외 축척
-- [x] M4 manifest·registry 기반 7개 템플릿
+- [x] M4 manifest·registry 기반 9개 템플릿
 - [x] M5 페이지 추가·복제·삭제·dnd-kit 순서 변경, manifest 입력 편집기
 - [x] M6 midnight 디자인 6종 조절과 모든 템플릿 공통 떠있는 이미지
 - [x] M7 860px 이하 단일 패널, safe-area 하단 탭, 44px 터치 영역
@@ -22,21 +22,27 @@
 - [x] M9 동일 CardRenderer 기반 격자/게시물 피드 미리보기
 - [x] M10 접근성, 저장 용량, invalid/future/과다 페이지 JSON, 모바일 오버플로
 - [x] M11 빌드·lint·자동 회귀·실제 브라우저·로컬 바로가기 검증
+- [x] M12 IndexedDB 프로젝트·페이지 저장소, Blob 이미지 분리, schema v2 단계별 마이그레이션
+- [x] M13 500ms debounce, 프로젝트별 저장 직렬화, 종료 복구 저널, 저장 상태·용량·재시도 UI
+- [x] M14 Vitest 도메인·마이그레이션·IndexedDB·legacy 이전·저장 경쟁 상태 단위 테스트
 
 ## 검증 증거
 
 | 명령/시나리오 | 화면 크기 | 수행 동작 | 실제 결과 | 결과 파일/픽셀 | 콘솔 error/warn |
 |---|---:|---|---|---|---:|
-| `npm run build` | - | TypeScript strict 및 Vite production build | 성공, 52 modules | `dist/` 생성 | 0/0 |
+| `npm run build` | - | TypeScript strict 및 Vite production build | 성공, 75 modules | `dist/` 생성 | 0/0 |
 | `npm run lint` | - | `src`, `tests` oxlint | 성공, warning 없음 | - | 0/0 |
+| `npm run test:unit` | - | 정규화, schema v1→v2, 경계 검사, 템플릿 매핑, IndexedDB CRUD, legacy 이전, debounce·재시도 | 7개 파일, 18개 시나리오 통과 | fake-indexeddb Blob 저장 확인 | 0/0 |
 | `npm run verify:brand` | - | 제거 대상 문자열·파일명 검사 | 통과, 0건 | - | 0/0 |
-| `npm run verify:ui` | 1440×900 | 프로젝트 생성, 7개 템플릿 선택·편집, 빈 kicker, 500자, 복제, 새로고침 | 8개 시나리오 통과 | Playwright trace-on-failure 설정 | 0/0 (검사 시 수집) |
+| `npm run verify:ui` | 1440×900 | 프로젝트 생성, 9개 템플릿 선택·편집, 빈 kicker, 500자, 복제, 새로고침 | 전체 22개 시나리오 통과 | Playwright trace-on-failure 설정 | 0/0 (검사 시 수집) |
 | `npm run verify:ui` | 360×800 | 페이지/미리보기/편집 탭 이동, 새로고침, 가로 폭 검사 | 통과, `scrollWidth-clientWidth=0` | - | 0/0 |
 | `npm run verify:ui` | 390×844 | 페이지/미리보기/편집 탭 이동, 새로고침, 가로 폭 검사 | 통과, `scrollWidth-clientWidth=0` | - | 0/0 |
 | `npm run verify:ui` | 768×1024 | 단일 패널 탭, 새로고침, 가로 폭 검사 | 통과, `scrollWidth-clientWidth=0` | - | 0/0 |
-| `npm run verify:ui` | 7개 템플릿 | overlay 업로드, width/x/y 끝점, 포인터 드래그, 삭제 | 7종 모두 통과 | data URL 유지 | 0/0 |
+| `npm run verify:ui` | 9개 템플릿 | overlay 업로드, width/x/y 끝점, 포인터 드래그, 삭제 | 9종 모두 통과 | data URL 유지 | 0/0 |
 | `npm run verify:ui` | - | invalid JSON, schemaVersion 99, 101페이지 거부, design 없는 v1 복구, quota 오류 | 전부 통과 | 기본 디자인 `#141C33` 복구 | 0/0 |
+| `tests/storage.spec.ts` | 1440×900 | legacy localStorage 이전, 원본 보존, Blob 분리, 500ms debounce, 즉시 새로고침 복구 | 2개 시나리오 통과 | schemaVersion 2, `idb-image:` 참조 확인 | 0/0 |
 | `npm run verify:exports` | 1080×1350 | 로컬 KoPub 로딩, overlay x/y=100, PNG, 2페이지 ZIP | 통과 | `my-card-studio-나의-카드뉴스-001.png` 1080×1350, ZIP 001→002 | 0/0 |
+| `npm run verify:lighthouse` | 1440×900 | production build 성능·접근성·권장사항·SEO 검사 | 통과 | 98 / 100 / 96 / 91 | 0/0 |
 | Chromium 실제 검사 | 1440×900 | 홈→프로젝트 생성→편집 화면, 로컬 폰트 준비, 새로고침 | 3열 UI·카드 표시 정상, 가로 오버플로 0 | KoPub/Pretendard `document.fonts.check=true` | 0/0 |
 | Chromium 실제 검사 | 390×844 | 저장 데이터 복구, 미리보기 탭 확인 | 카드 전체·상단 도구·하단 탭 표시, `scrollWidth=390` | 화면 캡처 확인 | 0/0 |
 | `install-local-shortcut.ps1 -Silent` + HTTP 검사 | Windows | 바로가기 설치, `npm run local`, 응답 검사 | 성공 | `C:\Users\tykim\Desktop\카드뉴스 스튜디오 (로컬).lnk`, HTTP 200 | - |
@@ -49,6 +55,8 @@
 - KoPubWorld와 Pretendard 파일 및 각 라이선스 원문을 `public/fonts`에 포함했습니다.
 
 ## 제한 및 위험
-- 서버·계정·클라우드 동기화는 PRD 범위 밖이며 데이터는 현재 브라우저 localStorage에 저장됩니다.
+- 서버·계정·클라우드 동기화는 범위 밖이며 데이터는 현재 브라우저 IndexedDB에 저장됩니다.
+- 브라우저 사이트 데이터 삭제와 시크릿 모드 종료는 IndexedDB도 삭제할 수 있으므로 중요한 작업은 이미지 포함 전체 JSON으로 별도 백업해야 합니다.
+- 이미지 포함 작업공간 JSON은 데이터가 많으면 메모리를 크게 사용할 수 있어 100MB 상한을 두며, 텍스트·디자인만 필요한 경우 경량 JSON 백업을 권장합니다.
 - Git 커밋·푸시·Vercel 배포는 요청되지 않아 수행하지 않았습니다.
 - Playwright 실행 로그의 `NO_COLOR` 문구는 Node 테스트 러너 환경 경고이며 웹앱 브라우저 콘솔 경고가 아닙니다. 실제 Chromium 콘솔은 error 0건, warning 0건입니다.
