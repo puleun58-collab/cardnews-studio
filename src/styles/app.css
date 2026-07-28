@@ -483,6 +483,22 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
 
 /* Modal and state screens */
 .modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgb(2 5 10 / 88%); }
+.safety-dialog { width: min(560px, 100%); max-height: min(760px, 92dvh); overflow: auto; border: 1px solid var(--ui-border-strong); border-radius: var(--radius-feature); background: var(--ui-surface); padding: 24px; box-shadow: var(--shadow-floating); }
+.safety-dialog h2 { margin: 7px 0 10px; font: 500 28px/1.3 var(--font-display); letter-spacing: -.04em; }
+.safety-dialog > p { color: var(--ui-text-muted); line-height: 1.65; }
+.dialog-actions { justify-content: flex-end; margin-top: 22px; }
+.mapping-summary { display: grid; gap: 12px; margin-top: 18px; }
+.mapping-summary section, .preserved-note { margin: 0; border: 1px solid var(--ui-border); border-radius: var(--radius-control); background: var(--ui-surface-raised); padding: 12px 14px; }
+.mapping-summary h3 { margin: 0 0 7px; font-size: 14px; color: var(--ui-accent); }
+.mapping-summary ul { margin: 0; padding-left: 20px; color: var(--ui-text-muted); }
+.mapping-summary li + li { margin-top: 5px; }
+.mapping-summary p { margin: 0; color: var(--ui-text-muted); line-height: 1.55; }
+.undo-stack { position: fixed; z-index: 80; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px)); display: grid; width: min(420px, calc(100vw - 32px)); gap: 10px; pointer-events: none; }
+.undo-notice { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--ui-border-strong); border-left: 3px solid var(--ui-accent); border-radius: var(--radius-control); background: rgb(16 21 28 / 97%); padding: 12px 14px; box-shadow: var(--shadow-floating); pointer-events: auto; }
+.undo-notice p { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.undo-notice .button-row { flex: 0 0 auto; }
+.undo-notice button { min-height: 38px; padding: 7px 10px; }
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 .feed-modal { width: min(1100px, 100%); height: min(840px, 94dvh); overflow: auto; border: 1px solid var(--ui-border-strong); border-radius: var(--radius-feature); background: var(--ui-surface); padding: 22px; box-shadow: var(--shadow-floating); }
 .feed-modal > header { position: sticky; top: -22px; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin: -2px -2px 20px; padding: 2px 2px 14px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); }
 .feed-modal h2 { margin: 5px 0 0; font: 500 27px/1.3 var(--font-display); letter-spacing: -.04em; }
@@ -570,11 +586,20 @@ input[type="checkbox"] { accent-color: var(--ui-accent); }
   .preview-image-add { padding-inline: 12px; }
   .preview-help { display: none; }
   .mobile-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; z-index: 40; border-top: 1px solid var(--ui-border); background: var(--ui-surface); padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+  .studio .undo-stack { bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .undo-stack { right: max(10px, env(safe-area-inset-right)); width: min(420px, calc(100vw - 20px)); }
+  .undo-notice { align-items: flex-start; flex-direction: column; }
+  .undo-notice .button-row { width: 100%; }
+  .undo-notice button { flex: 1; }
   .mobile-tabs button { border-color: transparent; background: transparent; }
   .mobile-tabs button.active { border-color: var(--ui-border); color: var(--ui-accent); background: var(--ui-surface-raised); }
   .feed-modal { padding: 14px; }
   .feed-modal > header { top: -14px; margin: 0 0 14px; padding-top: 2px; }
   .feed-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .undo-notice, .modal-backdrop, .safety-dialog { animation: none !important; transition: none !important; }
 }
 
 @media (max-width: 420px) {

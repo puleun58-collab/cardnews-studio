@@ -47,6 +47,17 @@ export interface CardPage {
   design?: CardDesignSettings
 }
 export interface Project { schemaVersion: number; id: string; name: string; createdAt: string; updatedAt: string; canvasSize: CardSize; pages: CardPage[] }
+export type EditorPanel = 'pages' | 'preview' | 'edit'
+export type EditorZoomMode = 'fit' | 50 | 75 | 100
+export interface ProjectEditorSession {
+  projectId: string
+  lastActivePageId: string | null
+  activePanel?: EditorPanel
+  zoomMode?: EditorZoomMode
+  pagePanelScrollTop?: number
+  editorPanelScrollTop?: number
+  updatedAt: string
+}
 export interface FieldDef { key: string; label: string; type: 'text' | 'textarea' | 'list' | 'image'; placeholder?: string; maxLength?: number; required?: boolean }
 export type DesignCapability = 'backgroundColor' | 'textColor' | 'gradient' | 'fontId' | 'letterSpacing' | 'lineHeight' | 'textAlign' | 'verticalAlign' | 'contentWidth' | 'showPageNumber'
 export type LayoutSettingKey = 'fontSize' | 'secondaryFontSize' | 'spacing' | 'layoutRatio'

@@ -10,7 +10,7 @@ interface Props {
   size: CardSize
   hasOverflow?: boolean
   onChange: (patch: Partial<CardPage>) => void
-  onTemplateChange: (id: TemplateId) => void
+  onTemplateChange: (id: TemplateId, trigger: HTMLElement) => void
 }
 
 const koreanFontLabels: Record<KoreanFontId, { name: string; note: string }> = {
@@ -108,7 +108,7 @@ export function FieldEditor({ page, size, hasOverflow = false, onChange, onTempl
               aria-label={item.name}
               aria-checked={item.id === page.templateId}
               className={item.id === page.templateId ? 'selected' : ''}
-              onClick={() => onTemplateChange(item.id)}
+              onClick={(event) => onTemplateChange(item.id, event.currentTarget)}
             >
               <TemplateThumbnail manifest={item} size={size} />
               <span><strong>{item.name}</strong><small>{item.description}</small></span>

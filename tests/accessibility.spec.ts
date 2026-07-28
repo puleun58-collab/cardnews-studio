@@ -63,6 +63,33 @@ test('reduced-motion과 dialog 키보드 포커스 흐름을 존중한다', asyn
   await expect(feedButton).toBeFocused()
 })
 
+test('삭제 확인 모달과 Undo 알림이 포커스 트랩과 접근 가능한 이름을 제공한다', async ({ page }) => {
+  await createProject(page)
+  await page.getByRole('button', { name: '페이지 추가' }).click()
+  const deleteButton = page.getByRole('button', { name: '삭제', exact: true })
+  await deleteButton.click()
+  const dialog = page.getByRole('alertdialog', { name: '페이지를 삭제할까요?' })
+  await expect(dialog).toBeVisible()
+  const cancel = dialog.getByRole('button', { name: '취소' })
+  const confirm = dialog.getByRole('button', { name: '삭제', exact: true })
+  await expect(cancel).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(confirm).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(cancel).toBeFocused()
+  expect((await new AxeBuilder({ page }).include('.safety-dialog').analyze()).violations).toEqual([])
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(deleteButton).toBeFocused()
+
+  await deleteButton.click()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Enter')
+  const undo = page.getByRole('button', { name: /2번째 페이지.*실행 취소/ })
+  await expect(undo).toBeVisible()
+  expect((await new AxeBuilder({ page }).include('.undo-stack').analyze()).violations).toEqual([])
+})
+
 test('home visual foundation stays warm white and loads the display font', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await reset(page)

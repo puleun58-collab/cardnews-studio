@@ -47,4 +47,22 @@ describe('IndexedDbProjectRepository', () => {
     expect(await requestToPromise(imageTransaction.objectStore(STORES.images).count())).toBe(0)
     await transactionDone(imageTransaction)
   })
+
+  it('pending 삭제가 참조하는 Data URL 이미지는 고아 정리에서 보호한다', async () => {
+    const { name, value } = repository()
+    const project = createProjectData('pending 이미지')
+    const image = 'data:image/png;base64,iVBORw0KGgo='
+    project.pages[0] = { ...project.pages[0], image }
+    await value.saveProject(project)
+    await value.saveProject({
+      ...project,
+      pages: [{ ...project.pages[0], image: null }],
+    })
+    expect(await value.deleteUnusedImages([image])).toBe(0)
+    const database = await openDatabase(name)
+    const protectedRead = database.transaction(STORES.images, 'readonly')
+    expect(await requestToPromise(protectedRead.objectStore(STORES.images).count())).toBe(1)
+    await transactionDone(protectedRead)
+    expect(await value.deleteUnusedImages()).toBe(1)
+  })
 })

@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useEffect, useRef, type UIEvent } from 'react'
 import type { CardPage, CardSize } from '../types'
 import { CardRenderer } from './CardRenderer'
 
@@ -43,8 +44,10 @@ function SortablePage({page,index,count,size,active,onSelect}:{page:CardPage;ind
   )
 }
 
-interface Props {pages:CardPage[];activeId:string;size:CardSize;onSelect:(id:string)=>void;onReorder:(oldIndex:number,newIndex:number)=>void;onAdd:()=>void;onDuplicate:()=>void;onDelete:()=>void}
-export function PagePanel({pages,activeId,size,onSelect,onReorder,onAdd,onDuplicate,onDelete}:Props){
+interface Props {pages:CardPage[];activeId:string;size:CardSize;onSelect:(id:string)=>void;onReorder:(oldIndex:number,newIndex:number)=>void;onAdd:()=>void;onDuplicate:()=>void;onDelete:()=>void;scrollTop?:number;onScroll?:(event:UIEvent<HTMLElement>)=>void}
+export function PagePanel({pages,activeId,size,onSelect,onReorder,onAdd,onDuplicate,onDelete,scrollTop,onScroll}:Props){
+  const panel=useRef<HTMLElement>(null)
+  useEffect(()=>{if(panel.current&&typeof scrollTop==='number')panel.current.scrollTop=scrollTop},[scrollTop])
   const sensors=useSensors(
     useSensor(PointerSensor,{activationConstraint:{distance:6}}),
     useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates}),
@@ -52,7 +55,7 @@ export function PagePanel({pages,activeId,size,onSelect,onReorder,onAdd,onDuplic
   const start=(event:DragStartEvent)=>onSelect(String(event.active.id))
   const end=(event:DragEndEvent)=>{if(!event.over||event.active.id===event.over.id)return;onReorder(pages.findIndex(page=>page.id===event.active.id),pages.findIndex(page=>page.id===event.over!.id))}
 
-  return <aside className="page-panel">
+  return <aside className="page-panel" ref={panel} onScroll={onScroll}>
     <div className="panel-heading"><h2>페이지</h2><button type="button" aria-label="페이지 추가" onClick={onAdd}>＋</button></div>
     <p className="panel-hint">클릭해 편집하고, 끌어서 순서를 바꿔보세요.</p>
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={start} onDragEnd={end}>

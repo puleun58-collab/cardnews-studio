@@ -14,6 +14,11 @@ export interface AppConfig {
   maxImagePixels: number
   maxImageDimension: number
   imageQuality: number
+  deletionUndoMs: number
+  maxPendingDeletions: number
+  historyLimit: number
+  historyMergeMs: number
+  editorSessionDebounceMs: number
 }
 export const appConfig: AppConfig = {
   appName: 'CARDNEWS STUDIO',
@@ -31,4 +36,9 @@ export const appConfig: AppConfig = {
   maxImagePixels: 40_000_000,
   maxImageDimension: 2400,
   imageQuality: 0.9,
+  deletionUndoMs: 8_000,
+  maxPendingDeletions: 4,
+  historyLimit: 20,
+  historyMergeMs: 650,
+  editorSessionDebounceMs: 250,
 }

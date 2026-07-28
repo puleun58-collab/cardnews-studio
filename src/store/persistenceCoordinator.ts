@@ -1,5 +1,5 @@
 import { appConfig } from '../config/appConfig'
-import type { ProjectRepository, StorageEstimate } from '../repositories/projectRepository'
+import type { DeleteProjectOptions, ProjectRepository, StorageEstimate } from '../repositories/projectRepository'
 import { classifyStorageError, type StorageFailureKind } from '../storage/storageErrors'
 import type { Project } from '../types'
 
@@ -125,7 +125,7 @@ export class PersistenceCoordinator {
     await this.flushAll()
   }
 
-  async deleteProject(projectId: string): Promise<void> {
+  async deleteProject(projectId: string, options: DeleteProjectOptions = {}): Promise<void> {
     const entry = this.entry(projectId)
     entry.deleted = true
     if (entry.timer) {
@@ -141,7 +141,7 @@ export class PersistenceCoordinator {
     }
     await this.flushAll()
     try {
-      await this.repository.deleteProject(projectId)
+      await this.repository.deleteProject(projectId, options)
       this.entries.delete(projectId)
       this.updateStatus({
         phase: 'saved',

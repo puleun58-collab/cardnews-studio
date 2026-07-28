@@ -3,7 +3,13 @@ const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQ
 async function create(page: import('@playwright/test').Page){await page.goto('/');await page.evaluate(()=>localStorage.clear());await page.reload();await page.getByRole('button',{name:'새 프로젝트 만들기'}).click();await expect(page.locator('.studio')).toBeVisible()}
 const templates=[['cover-hook','임팩트 표지'],['midnight-quote','문장 카드'],['stat-highlight','핵심 수치'],['list-insight','핵심 인사이트'],['process-steps','단계별 가이드'],['comparison','비교 분석'],['quote-commentary','인용·해설'],['image-text','이미지 스토리'],['divider-closing','마무리 카드']] as const
 async function openTemplates(page:import('@playwright/test').Page){const details=page.locator('.template-picker');if(!(await details.evaluate((element:HTMLDetailsElement)=>element.open)))await details.locator('summary').click()}
-async function selectTemplate(page:import('@playwright/test').Page,name:string,id:string){await openTemplates(page);await page.getByRole('radio',{name,exact:true}).click();await expect(page.locator('.preview-panel .card-root').first()).toHaveAttribute('data-template',id)}
+async function selectTemplate(page:import('@playwright/test').Page,name:string,id:string){
+  await openTemplates(page)
+  await page.getByRole('radio',{name,exact:true}).click()
+  const dialog=page.getByRole('dialog',{name:new RegExp(`${name}.*변경`)})
+  if(await dialog.count())await dialog.getByRole('button',{name:'변경',exact:true}).click()
+  await expect(page.locator('.preview-panel .card-root').first()).toHaveAttribute('data-template',id)
+}
 test('새 프로젝트 소개 문구가 의도한 두 줄로 표시된다',async({page})=>{
   await page.goto('/')
   const lines=page.locator('.new-project-intro p span')
@@ -198,7 +204,7 @@ test('배경, 템플릿 사진, 떠있는 이미지가 서로 구분되어 동�
   await page.locator('.template-image-field input[type=file]').setInputFiles({name:'content.png',mimeType:'image/png',buffer:pixel})
   await expect(page.locator('.preview-panel .hero-image img').first()).toBeVisible()
 })
-for(const viewport of [{width:360,height:800},{width:390,height:844},{width:768,height:1024},{width:1440,height:900}])test(`반응형 ${viewport.width}x${viewport.height}`,async({page})=>{await page.setViewportSize(viewport);await create(page);if(viewport.width<=860){await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeVisible();for(const name of ['페이지','미리보기','편집'])await page.getByRole('button',{name,exact:true}).last().click()}else await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeHidden();const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);expect(overflow).toBe(0);await page.reload();await expect(page.locator('.preview-title').getByText('1080 × 1350',{exact:true})).toBeVisible()})
+for(const viewport of [{width:360,height:800},{width:390,height:844},{width:768,height:1024},{width:1440,height:900}])test(`반응형 ${viewport.width}x${viewport.height}`,async({page})=>{await page.setViewportSize(viewport);await create(page);if(viewport.width<=860){await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeVisible();for(const name of ['페이지','미리보기','편집'])await page.getByRole('button',{name,exact:true}).last().click()}else await expect(page.getByRole('navigation',{name:'모바일 편집 탭'})).toBeHidden();const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);expect(overflow).toBe(0);await page.reload();if(viewport.width<=860){await expect(page.getByRole('button',{name:'편집',exact:true}).last()).toHaveAttribute('aria-pressed','true');await page.getByRole('button',{name:'미리보기',exact:true}).last().click()}await expect(page.locator('.preview-title').getByText('1080 × 1350',{exact:true})).toBeVisible()})
 
 test('mobile feed cards fit their cells and project details keep a modest left inset', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })

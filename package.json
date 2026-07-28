@@ -10,7 +10,7 @@
     "lint": "oxlint src tests",
     "test:unit": "vitest run",
     "preview": "vite preview --host 127.0.0.1 --port 5273",
-    "verify:ui": "playwright test tests/ui.spec.ts tests/imports.spec.ts tests/storage.spec.ts",
+    "verify:ui": "playwright test tests/ui.spec.ts tests/imports.spec.ts tests/storage.spec.ts tests/editing-safety.spec.ts",
     "verify:a11y": "playwright test tests/accessibility.spec.ts",
     "verify:exports": "playwright test tests/exports.spec.ts",
     "verify:brand": "node scripts/verify-brand.mjs",

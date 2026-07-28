@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { appConfig } from './config/appConfig'
 import { exportLightweightWorkspaceJson, exportProjectJson, exportWorkspaceJson, useStudioStore } from './store/studioStore'
 import { templateList } from './registry/templateRegistry'
@@ -10,15 +10,15 @@ import { FieldEditor } from './components/FieldEditor'
 import { downloadJson, downloadWorkspaceJson, exportCurrent, exportZip, type ExportHandle } from './engine/exporter'
 import { ExportStage } from './components/ExportStage'
 import { StorageStatusPanel } from './components/StorageStatusPanel'
+import { ConfirmDialog, TemplateChangeDialog, UndoNotifications } from './components/SafetyDialogs'
 import { cardSizePresets, formatCardSize, getCardSizePreset, normalizeCardSize } from './brand/cardSize'
-import type { CardSize, CardSizePreset, Project, TemplateId } from './types'
+import type { TemplateMappingResult } from './domain/page/pageOperations'
+import type { CardSize, CardSizePreset, EditorPanel, EditorZoomMode, Project, TemplateId } from './types'
 import './styles/app.css'
 import './styles/card.css'
 import './styles/design.css'
 import './styles/fonts.css'
 
-type Panel = 'pages' | 'preview' | 'edit'
-type ZoomMode = 'fit' | 50 | 75 | 100
 type OperationStatus = { kind: 'idle' | 'loading' | 'success' | 'error'; message: string; recovery?: 'import' }
 
 function StorageManagement() {
@@ -103,6 +103,7 @@ function ProjectHome() {
   const [customSize, setCustomSize] = useState<CardSize>({ width: 1080, height: 1440 })
   const [homeError, setHomeError] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ project: Project; trigger: HTMLElement } | null>(null)
   const nameInput = useRef<HTMLInputElement>(null)
   const composition = compositions.find((item) => item.id === compositionId)!
 
@@ -209,7 +210,7 @@ function ProjectHome() {
                     <div className="button-row project-actions">
                       <button type="button" onClick={() => openProject(project.id)}>열기</button>
                       <button type="button" className="subtle" onClick={() => duplicateProject(project.id)}>복제</button>
-                      <button type="button" className="danger" onClick={() => { if (confirm('이 프로젝트를 삭제할까요?')) deleteProject(project.id) }}>삭제</button>
+                      <button type="button" className="danger" onClick={(event) => setDeleteTarget({ project, trigger: event.currentTarget })}>삭제</button>
                     </div>
                   </div>
                 </article>
@@ -219,6 +220,19 @@ function ProjectHome() {
         </section>
         <StorageManagement />
       </main>
+      {deleteTarget && (
+        <ConfirmDialog
+          title="프로젝트를 삭제할까요?"
+          description={`“${deleteTarget.project.name}” 프로젝트가 목록에서 사라집니다. 삭제 후 8초 동안 실행 취소할 수 있습니다.`}
+          confirmLabel="삭제"
+          returnFocus={deleteTarget.trigger}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            deleteProject(deleteTarget.project.id)
+            setDeleteTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -301,69 +315,61 @@ function useActiveProject() {
 function Editor() {
   const store = useStudioStore()
   const project = useActiveProject()
-  const [panel, setPanel] = useState<Panel>('preview')
+  const initialSession = project ? store.editorSessions[project.id] : undefined
+  const [panel, setPanel] = useState<EditorPanel>(initialSession?.activePanel ?? 'preview')
   const [feed, setFeed] = useState(false)
   const [status, setStatus] = useState<OperationStatus>({ kind: 'idle', message: '저장됨' })
   const [busy, setBusy] = useState(false)
-  const [zoom, setZoom] = useState<ZoomMode>('fit')
+  const [zoom, setZoom] = useState<EditorZoomMode>(initialSession?.zoomMode ?? 'fit')
   const [hasOverflow, setHasOverflow] = useState(false)
-  const historyPast = useRef<Project[]>([])
-  const historyFuture = useRef<Project[]>([])
-  const historyLast = useRef<Project | null>(null)
-  const applyingHistory = useRef(false)
-  const [, refreshHistory] = useState(0)
+  const [pageDeleteConfirm, setPageDeleteConfirm] = useState<HTMLElement | null>(null)
+  const [templateChange, setTemplateChange] = useState<{ result: TemplateMappingResult; pageId: string; trigger: HTMLElement } | null>(null)
   const stage = useRef<ExportHandle>(null)
   const importInput = useRef<HTMLInputElement>(null)
+  const editorPanel = useRef<HTMLElement>(null)
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollPatch = useRef<{ pagePanelScrollTop?: number; editorPanelScrollTop?: number }>({})
+  const projectId = project?.id
 
   useEffect(() => {
-    if (!project) {
-      historyPast.current = []
-      historyFuture.current = []
-      historyLast.current = null
-      return
-    }
-    if (!historyLast.current || historyLast.current.id !== project.id) {
-      historyPast.current = []
-      historyFuture.current = []
-      historyLast.current = structuredClone(project)
-      refreshHistory((value) => value + 1)
-      return
-    }
-    if (applyingHistory.current) {
-      applyingHistory.current = false
-      historyLast.current = structuredClone(project)
-      return
-    }
-    const previous = historyLast.current
-    if (JSON.stringify(previous) !== JSON.stringify(project)) {
-      historyPast.current = [...historyPast.current, structuredClone(previous)].slice(-20)
-      historyFuture.current = []
-      historyLast.current = structuredClone(project)
-      refreshHistory((value) => value + 1)
-    }
-  }, [project])
+    if (!projectId) return
+    const session = useStudioStore.getState().editorSessions[projectId]
+    setPanel(session?.activePanel ?? 'preview')
+    setZoom(session?.zoomMode ?? 'fit')
+    requestAnimationFrame(() => {
+      if (editorPanel.current) editorPanel.current.scrollTop = session?.editorPanelScrollTop ?? 0
+    })
+  }, [projectId])
 
-  const undo = useCallback(() => {
-    if (!project) return
-    const previous = historyPast.current.pop()
-    if (!previous) return
-    historyFuture.current = [...historyFuture.current, structuredClone(project)].slice(-20)
-    applyingHistory.current = true
-    historyLast.current = structuredClone(previous)
-    store.restoreActiveProject(previous, store.activePageId)
-    refreshHistory((value) => value + 1)
-  }, [project, store])
+  useEffect(() => () => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    if (projectId && Object.keys(scrollPatch.current).length) {
+      useStudioStore.getState().updateEditorSession(projectId, scrollPatch.current, true)
+    }
+  }, [projectId])
 
-  const redo = useCallback(() => {
+  const queueScrollSession = (patch: typeof scrollPatch.current) => {
     if (!project) return
-    const next = historyFuture.current.pop()
-    if (!next) return
-    historyPast.current = [...historyPast.current, structuredClone(project)].slice(-20)
-    applyingHistory.current = true
-    historyLast.current = structuredClone(next)
-    store.restoreActiveProject(next, store.activePageId)
-    refreshHistory((value) => value + 1)
-  }, [project, store])
+    scrollPatch.current = { ...scrollPatch.current, ...patch }
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    scrollTimer.current = setTimeout(() => {
+      store.updateEditorSession(project.id, scrollPatch.current)
+      scrollPatch.current = {}
+      scrollTimer.current = null
+    }, 200)
+  }
+
+  const selectPanel = (value: EditorPanel) => {
+    if (!project) return
+    setPanel(value)
+    store.updateEditorSession(project.id, { activePanel: value }, true)
+  }
+
+  const selectZoom = (value: EditorZoomMode) => {
+    if (!project) return
+    setZoom(value)
+    store.updateEditorSession(project.id, { zoomMode: value }, true)
+  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -372,12 +378,12 @@ function Editor() {
       if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
       if (event.key.toLowerCase() !== 'z' && event.key.toLowerCase() !== 'y') return
       event.preventDefault()
-      if (event.key.toLowerCase() === 'y' || event.shiftKey) redo()
-      else undo()
+      if (event.key.toLowerCase() === 'y' || event.shiftKey) useStudioStore.getState().redo()
+      else useStudioStore.getState().undo()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [redo, undo])
+  }, [])
 
   useEffect(() => {
     if (status.kind !== 'success') return
@@ -398,6 +404,7 @@ function Editor() {
 
   const page = project.pages.find((item) => item.id === store.activePageId) ?? project.pages[0]
   const index = project.pages.findIndex((item) => item.id === page.id)
+  const history = store.histories[project.id]
   const saveStatusKind: OperationStatus['kind'] = store.saveStatus.phase === 'error'
     ? 'error'
     : store.saveStatus.phase === 'saving' || store.saveStatus.dirty
@@ -454,8 +461,8 @@ function Editor() {
         </div>
         <div className="toolbar-center">
           <div className="history-actions" aria-label="편집 기록">
-            <button type="button" disabled={historyPast.current.length === 0} onClick={undo}>실행 취소</button>
-            <button type="button" disabled={historyFuture.current.length === 0} onClick={redo}>다시 실행</button>
+            <button type="button" disabled={!history?.past.length} onClick={store.undo}>실행 취소</button>
+            <button type="button" disabled={!history?.future.length} onClick={store.redo}>다시 실행</button>
           </div>
           <div className={`save-status is-${visibleStatus.kind}`} role={visibleStatus.kind === 'error' ? 'alert' : 'status'} aria-live="polite">
             <span className="status-indicator" aria-hidden="true" />
@@ -478,7 +485,18 @@ function Editor() {
 
       <main className="workspace" id="main-content">
         <div className={`mobile-panel ${panel === 'pages' ? 'shown' : ''}`}>
-          <PagePanel pages={project.pages} activeId={page.id} size={project.canvasSize} onSelect={store.setActivePage} onReorder={store.reorderPages} onAdd={() => store.addPage()} onDuplicate={() => store.duplicatePage(page.id)} onDelete={() => { if (project.pages.length > 1 && confirm('이 페이지를 삭제할까요?')) store.deletePage(page.id) }} />
+          <PagePanel
+            pages={project.pages}
+            activeId={page.id}
+            size={project.canvasSize}
+            scrollTop={store.editorSessions[project.id]?.pagePanelScrollTop}
+            onScroll={(event) => queueScrollSession({ pagePanelScrollTop: event.currentTarget.scrollTop })}
+            onSelect={store.setActivePage}
+            onReorder={store.reorderPages}
+            onAdd={() => store.addPage()}
+            onDuplicate={() => store.duplicatePage(page.id)}
+            onDelete={() => setPageDeleteConfirm(document.activeElement instanceof HTMLElement ? document.activeElement : null)}
+          />
         </div>
         <section className={`preview-panel mobile-panel ${panel === 'preview' ? 'shown' : ''}`} aria-labelledby="preview-heading">
           <div className="preview-title">
@@ -486,29 +504,64 @@ function Editor() {
             <div className="preview-meta"><span>{index + 1} / {project.pages.length}</span><span>{formatCardSize(project.canvasSize)}</span></div>
             <div className="zoom-controls" role="group" aria-label="미리보기 배율">
               {([['fit', '맞춤'], [50, '50%'], [75, '75%'], [100, '100%']] as const).map(([value, label]) => (
-                <button key={value} type="button" aria-pressed={zoom === value} onClick={() => setZoom(value)}>{label}</button>
+                <button key={value} type="button" aria-pressed={zoom === value} onClick={() => selectZoom(value)}>{label}</button>
               ))}
             </div>
           </div>
           <PreviewPane page={page} pageIndex={index} pageCount={project.pages.length} size={project.canvasSize} interactive zoom={zoom} onOverflowChange={setHasOverflow} onOverlayChange={(overlayImage) => store.updatePage(page.id, { overlayImage })} />
           <p className="preview-help">이미지를 선택한 뒤 드래그해 이동하고 모서리 핸들로 크기를 조절할 수 있습니다.</p>
         </section>
-        <aside className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
+        <aside ref={editorPanel} onScroll={(event) => queueScrollSession({ editorPanelScrollTop: event.currentTarget.scrollTop })} className={`editor-panel mobile-panel ${panel === 'edit' ? 'shown' : ''}`} aria-labelledby="editor-heading">
           <div className="panel-heading">
             <div><span className="panel-kicker">선택한 카드</span><h2 id="editor-heading">내용 편집</h2></div>
             <button type="button" onClick={() => store.addPage(page.templateId)}>같은 템플릿 추가</button>
           </div>
           <CanvasSizeControl key={project.id} size={project.canvasSize} onChange={(canvasSize) => store.updateProjectCanvasSize(project.id, canvasSize)} />
-          <FieldEditor page={page} size={project.canvasSize} hasOverflow={hasOverflow} onChange={(patch) => store.updatePage(page.id, patch)} onTemplateChange={(id) => store.replacePageTemplate(page.id, id)} />
+          <FieldEditor
+            page={page}
+            size={project.canvasSize}
+            hasOverflow={hasOverflow}
+            onChange={(patch) => store.updatePage(page.id, patch)}
+            onTemplateChange={(id, trigger) => {
+              const result = store.analyzePageTemplate(page.id, id)
+              if (!result) return
+              if (result.hasPotentialDataLoss) setTemplateChange({ result, pageId: page.id, trigger })
+              else store.replacePageTemplate(page.id, id, result)
+            }}
+          />
         </aside>
       </main>
 
       <nav className="mobile-tabs" aria-label="모바일 편집 탭">
         {([['pages', '페이지'], ['preview', '미리보기'], ['edit', '편집']] as const).map(([value, label]) => (
-          <button key={value} type="button" className={panel === value ? 'active' : ''} aria-pressed={panel === value} onClick={() => setPanel(value)}>{label}</button>
+          <button key={value} type="button" className={panel === value ? 'active' : ''} aria-pressed={panel === value} onClick={() => selectPanel(value)}>{label}</button>
         ))}
       </nav>
       {feed && <Feed project={project} onClose={() => setFeed(false)} />}
+      {pageDeleteConfirm && (
+        <ConfirmDialog
+          title="페이지를 삭제할까요?"
+          description={`${index + 1}번째 페이지가 목록에서 사라집니다. 삭제 후 8초 동안 원래 위치로 복구할 수 있습니다.`}
+          confirmLabel="삭제"
+          returnFocus={pageDeleteConfirm}
+          onClose={() => setPageDeleteConfirm(null)}
+          onConfirm={() => {
+            store.deletePage(page.id)
+            setPageDeleteConfirm(null)
+          }}
+        />
+      )}
+      {templateChange && (
+        <TemplateChangeDialog
+          result={templateChange.result}
+          returnFocus={templateChange.trigger}
+          onClose={() => setTemplateChange(null)}
+          onConfirm={() => {
+            store.replacePageTemplate(templateChange.pageId, templateChange.result.page.templateId, templateChange.result)
+            setTemplateChange(null)
+          }}
+        />
+      )}
       <ExportStage ref={stage} />
     </div>
   )
@@ -526,5 +579,10 @@ export default function App() {
   if (hydrationState === 'error') {
     return <main className="state-page"><span className="section-label">저장소 오류</span><h1>프로젝트를 불러오지 못했습니다</h1><p role="alert">{hydrationError}</p><button type="button" onClick={() => location.reload()}>다시 시도</button></main>
   }
-  return active ? <Editor /> : <ProjectHome />
+  return (
+    <>
+      {active ? <Editor /> : <ProjectHome />}
+      <UndoNotifications />
+    </>
+  )
 }

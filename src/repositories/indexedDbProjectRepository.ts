@@ -19,7 +19,7 @@ import {
 } from '../storage/imageStorage'
 import { normalizeProjectData } from '../validation/projectSchema'
 import type { CardPage, Project } from '../types'
-import type { ProjectRepository, SaveProjectOptions, StorageEstimate } from './projectRepository'
+import type { DeleteProjectOptions, ProjectRepository, SaveProjectOptions, StorageEstimate } from './projectRepository'
 
 const imageSources = (page: CardPage) => [
   page.backgroundImage,
@@ -102,7 +102,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await transactionDone(transaction)
   }
 
-  async deleteProject(id: string): Promise<void> {
+  async deleteProject(id: string, options: DeleteProjectOptions = {}): Promise<void> {
     const database = await this.database()
     const transaction = database.transaction([STORES.projects, STORES.pages], 'readwrite', { durability: 'strict' })
     transaction.objectStore(STORES.projects).delete(id)
@@ -110,7 +110,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const keys = await requestToPromise(pages.index('projectId').getAllKeys(id))
     keys.forEach((key) => pages.delete(key))
     await transactionDone(transaction)
-    await this.deleteUnusedImages()
+    await this.deleteUnusedImages(options.protectedImageSources)
   }
 
   async saveImage(blob: Blob): Promise<string> {
@@ -143,7 +143,16 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     return record?.blob ?? null
   }
 
-  async deleteUnusedImages(): Promise<number> {
+  async deleteUnusedImages(protectedImageSources: Iterable<string> = []): Promise<number> {
+    const protectedIds = new Set<string>()
+    for (const source of protectedImageSources) {
+      if (isStoredImageReference(source)) {
+        protectedIds.add(imageIdFromReference(source))
+        continue
+      }
+      const blob = await imageSourceToBlob(source)
+      if (blob) protectedIds.add(`sha256-${await sha256(blob)}`)
+    }
     const database = await this.database()
     const read = database.transaction([STORES.pages, STORES.images], 'readonly')
     const [pages, images] = await Promise.all([
@@ -155,6 +164,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     pages.flatMap(imageSources).forEach((source) => {
       if (isStoredImageReference(source)) used.add(imageIdFromReference(source))
     })
+    protectedIds.forEach((id) => used.add(id))
     const unused = images.filter((key) => !used.has(String(key)))
     if (!unused.length) return 0
     const write = database.transaction(STORES.images, 'readwrite')
@@ -175,6 +185,13 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const database = await this.database()
     const transaction = database.transaction(STORES.meta, 'readwrite')
     transaction.objectStore(STORES.meta).put({ key, value } satisfies MetaRecord<T>)
+    await transactionDone(transaction)
+  }
+
+  async deleteMeta(key: string): Promise<void> {
+    const database = await this.database()
+    const transaction = database.transaction(STORES.meta, 'readwrite')
+    transaction.objectStore(STORES.meta).delete(key)
     await transactionDone(transaction)
   }
 

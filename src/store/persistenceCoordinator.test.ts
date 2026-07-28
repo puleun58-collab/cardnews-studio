@@ -19,6 +19,7 @@ class FakeRepository implements ProjectRepository {
   async deleteUnusedImages() { return 0 }
   async getMeta<T>() { return null as T | null }
   async setMeta<T>(_key: string, _value: T) {}
+  async deleteMeta(_key: string) {}
   async getStorageEstimate(): Promise<StorageEstimate> { return { usage: 1, quota: 10, ratio: .1 } }
   async clearAll() {}
 }
@@ -61,5 +62,29 @@ describe('PersistenceCoordinator', () => {
     await coordinator.retry()
     expect(repository.saves).toHaveLength(1)
     expect(status).toMatchObject({ phase: 'saved', dirty: false })
+  })
+
+  it('저장 중 Undo 같은 새 revision이 생기면 오래된 저장 뒤 최신 상태를 다시 저장한다', async () => {
+    let releaseFirst: () => void = () => undefined
+    const repository = new FakeRepository()
+    let callCount = 0
+    repository.saveProject = async (project: Project) => {
+      callCount += 1
+      repository.saves.push(structuredClone(project))
+      if (callCount === 1) await new Promise<void>((resolve) => { releaseFirst = resolve })
+    }
+    let project = createProjectData('변경 전')
+    const coordinator = new PersistenceCoordinator(repository, 0)
+    coordinator.bind({ getProject: () => project, setStatus: () => undefined })
+    project = { ...project, name: '템플릿 변경 상태' }
+    coordinator.markDirty(project.id, { immediate: true })
+    const saving = coordinator.flushProject(project.id)
+    await vi.waitFor(() => expect(repository.saves).toHaveLength(1))
+    project = { ...project, name: 'Undo로 복구된 상태' }
+    coordinator.markDirty(project.id, { immediate: true })
+    releaseFirst()
+    await saving
+    await coordinator.flushAll()
+    expect(repository.saves.map((saved) => saved.name)).toEqual(['템플릿 변경 상태', 'Undo로 복구된 상태'])
   })
 })
