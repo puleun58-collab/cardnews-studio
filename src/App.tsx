@@ -223,7 +223,7 @@ function ProjectHome() {
       {deleteTarget && (
         <ConfirmDialog
           title="프로젝트를 삭제할까요?"
-          description={`“${deleteTarget.project.name}” 프로젝트가 목록에서 사라집니다. 삭제 후 8초 동안 실행 취소할 수 있습니다.`}
+          description={`“${deleteTarget.project.name}” 프로젝트가 목록에서 사라집니다.`}
           confirmLabel="삭제"
           returnFocus={deleteTarget.trigger}
           onClose={() => setDeleteTarget(null)}
@@ -541,7 +541,7 @@ function Editor() {
       {pageDeleteConfirm && (
         <ConfirmDialog
           title="페이지를 삭제할까요?"
-          description={`${index + 1}번째 페이지가 목록에서 사라집니다. 삭제 후 8초 동안 원래 위치로 복구할 수 있습니다.`}
+          description={`${index + 1}번째 페이지가 목록에서 사라집니다.`}
           confirmLabel="삭제"
           returnFocus={pageDeleteConfirm}
           onClose={() => setPageDeleteConfirm(null)}

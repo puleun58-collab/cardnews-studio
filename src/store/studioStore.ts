@@ -469,7 +469,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       projects: state.projects.filter((item) => item.id !== id),
       activeProjectId: wasActive ? null : state.activeProjectId,
       activePageId: wasActive ? null : state.activePageId,
-      operationMessage: `"${project.name}"을 삭제했습니다. ${appConfig.deletionUndoMs / 1000}초 동안 실행 취소할 수 있습니다.`,
+      operationMessage: '삭제했습니다.',
     })
     persistSession()
     addPendingOperation(operation)
@@ -564,7 +564,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       projects: state.projects.map((item) => item.id === project.id ? after : item),
       activePageId: nextActive,
       histories: { ...state.histories, [project.id]: pushHistory(state.histories[project.id] ?? emptyProjectHistory(), entry) },
-      operationMessage: `${originalIndex + 1}번째 페이지를 삭제했습니다. ${appConfig.deletionUndoMs / 1000}초 동안 실행 취소할 수 있습니다.`,
+      operationMessage: '삭제했습니다.',
     }))
     updateSessionSnapshot(project.id, { lastActivePageId: nextActive }, true)
     persistSession()

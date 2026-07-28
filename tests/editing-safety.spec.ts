@@ -22,6 +22,8 @@ async function createProject(page: Page, name: string) {
 async function confirmDelete(page: Page) {
   const dialog = page.getByRole('alertdialog')
   await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('확인', { exact: true })).toBeVisible()
+  await expect(dialog).not.toContainText('8초')
   await dialog.getByRole('button', { name: '삭제', exact: true }).click()
 }
 
@@ -52,6 +54,7 @@ test('프로젝트 삭제는 지연 확정되고 Undo 시 원래 위치와 데�
   await page.getByRole('button', { name: '삭제', exact: true }).click()
   await confirmDelete(page)
   await expect(page.getByText('복구할 프로젝트', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.undo-notice p')).toHaveText('삭제했습니다.')
   await expect.poll(() => storedProjectCount(page)).toBe(1)
   const undo = page.getByRole('button', { name: /복구할 프로젝트.*실행 취소/ })
   await expect(undo).toBeVisible()

@@ -58,7 +58,7 @@ export function ConfirmDialog({
   return (
     <div className="modal-backdrop">
       <div className="safety-dialog" ref={dialog} role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
-        <span className="section-label">안전 확인</span>
+        <span className="section-label">확인</span>
         <h2 id="confirm-title">{title}</h2>
         <p id="confirm-description">{description}</p>
         {children}
@@ -153,15 +153,15 @@ function UndoNotice({ operationId }: { operationId: string }) {
     return () => clearTimeout(timer)
   }, [operation])
   if (!operation) return null
-  const message = operation.type === 'project'
+  const accessibleContext = operation.type === 'project'
     ? `“${operation.project.name}”을 삭제했습니다.`
     : `${operation.originalIndex + 1}번째 페이지를 삭제했습니다.`
   return (
     <div className="undo-notice" ref={root} role="status">
-      <p>{message}</p>
+      <p>삭제했습니다.</p>
       <div className="button-row">
-        <button type="button" className="primary" aria-label={`${message} 실행 취소`} onClick={() => void store.undoDeletion(operation.operationId)}>실행 취소</button>
-        <button type="button" className="subtle" aria-label={`${message} 지금 영구 삭제`} onClick={() => void store.finalizeDeletion(operation.operationId)}>지금 삭제</button>
+        <button type="button" className="primary" aria-label={`${accessibleContext} 실행 취소`} onClick={() => void store.undoDeletion(operation.operationId)}>실행 취소</button>
+        <button type="button" className="subtle" aria-label={`${accessibleContext} 지금 영구 삭제`} onClick={() => void store.finalizeDeletion(operation.operationId)}>지금 삭제</button>
       </div>
     </div>
   )
