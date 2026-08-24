@@ -184,7 +184,7 @@ test('페이지 복제·삭제, 캔버스와 이미지 변경이 프로젝트 �
   await expect.poll(() => overlay.evaluate((element) => parseFloat((element as HTMLElement).style.left))).toBeGreaterThan(beforeLeft)
 })
 
-test('템플릿 손실 안내에서 취소는 불변이고 변경 후 Undo는 원본 전체를 복구한다', async ({ page }) => {
+test('간결한 템플릿 변경 안내에서 취소는 불변이고 변경 후 Undo는 원본 전체를 복구한다', async ({ page }) => {
   await createProject(page, '템플릿 안전')
   const body = page.getByRole('textbox', { name: /본문 \d/ })
   const note = page.getByRole('textbox', { name: /하단 문구/ })
@@ -195,8 +195,9 @@ test('템플릿 손실 안내에서 취소는 불변이고 변경 후 Undo는 �
   const imageTemplate = page.getByRole('radio', { name: '이미지 스토리', exact: true })
   await imageTemplate.click()
   const dialog = page.getByRole('dialog', { name: /이미지 스토리.*변경/ })
-  await expect(dialog).toContainText('새 템플릿에서 제외')
-  await expect(dialog).toContainText('배경 이미지')
+  await expect(dialog).toContainText('변경 후에도 실행 취소로 원래 상태로 되돌릴 수 있습니다.')
+  await expect(dialog.locator('.mapping-summary')).toHaveCount(0)
+  await expect(dialog.getByRole('button')).toHaveText(['취소', '변경'])
   await dialog.getByRole('button', { name: '취소' }).click()
   await expect(page.locator('.preview-panel .card-root').first()).toHaveAttribute('data-template', 'midnight-quote')
   await expect(note).toHaveValue('새 템플릿에서 제외될 원문')

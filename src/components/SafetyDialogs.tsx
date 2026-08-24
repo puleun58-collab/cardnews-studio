@@ -71,12 +71,6 @@ export function ConfirmDialog({
   )
 }
 
-const readableValue = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) return `${value.length}개 항목`
-  if (!value) return '빈 값'
-  return value.length > 42 ? `${value.slice(0, 42)}…` : value
-}
-
 export function TemplateChangeDialog({
   result,
   onConfirm,
@@ -93,42 +87,8 @@ export function TemplateChangeDialog({
   return (
     <div className="modal-backdrop">
       <div className="safety-dialog template-change-dialog" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="template-change-title" aria-describedby="template-change-description">
-        <span className="section-label">데이터 손실 확인</span>
         <h2 id="template-change-title">‘{target.name}’ 템플릿으로 변경할까요?</h2>
-        <p id="template-change-description">다음 내용이 이동하거나 보이지 않게 됩니다. 변경 후에도 실행 취소로 원본을 완전히 복구할 수 있습니다.</p>
-        <div className="mapping-summary">
-          {result.convertedFields.length > 0 && (
-            <section aria-labelledby="converted-title">
-              <h3 id="converted-title">다른 필드로 이동</h3>
-              <ul>{result.convertedFields.map((item, index) => <li key={`${item.sourceKey}-${index}`}>{item.sourceKey} → {item.targetKey}: {readableValue(item.targetValue)}</li>)}</ul>
-            </section>
-          )}
-          {result.truncatedFields.length > 0 && (
-            <section aria-labelledby="truncated-title">
-              <h3 id="truncated-title">일부만 유지</h3>
-              <ul>{result.truncatedFields.map((item, index) => <li key={`${item.sourceKey}-${index}`}>{item.sourceKey}: {item.reason}</li>)}</ul>
-            </section>
-          )}
-          {result.discardedFields.length > 0 && (
-            <section aria-labelledby="discarded-title">
-              <h3 id="discarded-title">새 템플릿에서 제외</h3>
-              <ul>{result.discardedFields.map((item, index) => <li key={`${item.sourceKey}-${index}`}>{item.sourceKey}: {readableValue(item.sourceValue)}</li>)}</ul>
-            </section>
-          )}
-          {result.unsupportedImages.length > 0 && (
-            <section aria-labelledby="image-warning-title">
-              <h3 id="image-warning-title">현재 템플릿에서 보이지 않는 이미지</h3>
-              <p>{result.unsupportedImages.join(', ')} 데이터는 보존되지만 새 템플릿에는 표시되지 않습니다.</p>
-            </section>
-          )}
-          {result.unsupportedDesignProperties.length > 0 && (
-            <section aria-labelledby="design-warning-title">
-              <h3 id="design-warning-title">현재 템플릿에서 적용되지 않는 디자인</h3>
-              <p>{result.unsupportedDesignProperties.join(', ')}</p>
-            </section>
-          )}
-          {result.preservedImages.length > 0 && <p className="preserved-note">{result.preservedImages.join(', ')}는 그대로 유지됩니다.</p>}
-        </div>
+        <p id="template-change-description">변경 후에도 실행 취소로 원래 상태로 되돌릴 수 있습니다.</p>
         <div className="button-row dialog-actions">
           <button type="button" onClick={onClose}>취소</button>
           <button type="button" className="primary" onClick={onConfirm}>변경</button>
