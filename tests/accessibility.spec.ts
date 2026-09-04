@@ -110,11 +110,10 @@ test('home visual foundation stays warm white and loads the display font', async
   expect(result.headingFont).toContain('Noto Serif KR Variable')
   expect(result.overflow).toBe(0)
   await expect(page.getByRole('heading', { level: 1, name: 'CARDNEWS STUDIO' })).toBeVisible()
-  await expect(page.locator('.brand-mark')).toHaveAttribute('data-logo', 'c-frame')
-  await expect(page.locator('.brand-mark')).toHaveText('')
-  await expect.poll(() => page.locator('.brand-mark').evaluate((node) => ({
-    stroke: getComputedStyle(node, '::before').borderTopWidth,
-    opening: getComputedStyle(node, '::after').height,
-  }))).toEqual({ stroke: '5px', opening: '14px' })
+  await expect(page.locator('img.brand-mark')).toHaveAttribute('src', '/brand/logo-mark.svg')
+  await expect.poll(() => page.locator('img.brand-mark').evaluate((node: HTMLImageElement) => ({
+    width: node.clientWidth,
+    loaded: node.complete && node.naturalWidth > 0,
+  }))).toEqual({ width: 54, loaded: true })
   await expect(page.locator('.new-project-intro p span')).toHaveCount(2)
 })

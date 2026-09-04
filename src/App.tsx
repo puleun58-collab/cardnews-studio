@@ -126,7 +126,7 @@ function ProjectHome() {
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <main className="home" id="main-content">
         <header className="home-header" aria-label="서비스 소개">
-          <div className="brand-mark" data-logo="c-frame" aria-hidden="true" />
+          <img className="brand-mark" src="/brand/logo-mark.svg" alt="" aria-hidden="true" width="54" height="54" />
           <div className="home-brand-copy">
             <h1>{appConfig.appName}</h1>
             <p>{appConfig.appDescription}</p>
@@ -456,6 +456,7 @@ function Editor() {
       <a className="skip-link" href="#main-content">편집 영역으로 건너뛰기</a>
       <header className="toolbar" aria-label="프로젝트 도구막대">
         <div className="toolbar-main">
+          <img className="toolbar-mark" src="/brand/logo-mark.svg" alt="" aria-hidden="true" width="26" height="26" />
           <button type="button" className="back-button" onClick={store.goHome}>처음으로</button>
           <input aria-label="프로젝트 이름" value={project.name} maxLength={80} onChange={(event) => store.renameProject(project.id, event.target.value)} />
         </div>

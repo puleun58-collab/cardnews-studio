@@ -1,3 +1,5 @@
+<img src="public/brand/logo-horizontal.svg" alt="CARDNEWS STUDIO" width="360" />
+
 # 카드뉴스 스튜디오
 
 글과 사진을 입력해 1080×1350 카드뉴스를 만들고 PNG 또는 ZIP으로 저장하는 로컬 우선 웹앱입니다. 프로젝트와 페이지는 브라우저의 IndexedDB에 자동 저장되며, 데스크톱과 모바일 편집 화면을 지원합니다.
@@ -201,6 +203,8 @@ npm run verify:lighthouse
 ```text
 cardnews-studio/
 ├─ public/
+│  ├─ brand/                  # 로고 SVG(심볼·가로형·단색)
+│  ├─ favicon.svg             # 심볼 기반 파비콘
 │  └─ fonts/                  # 로컬 한글 웹폰트와 각 배포 라이선스
 ├─ scripts/
 │  ├─ start-local.ps1         # 서버 확인·실행 후 브라우저 열기
@@ -238,6 +242,7 @@ cardnews-studio/
 - 홈·편집기 레이아웃과 반응형 스타일: `src/styles/app.css`
 - 템플릿 입력 필드와 기본 내용: `src/registry/templateRegistry.ts`
 - 한 장/여러 장 추천 구성: `src/compositions.ts`
+- 로고 자산: `public/brand/logo-mark.svg`, `logo-horizontal.svg`, `logo-monochrome.svg`, `public/favicon.svg` (워드마크는 Manrope 400·500 글리프를 path로 변환)
 
 ## 4. 자동 실행 방법
 
